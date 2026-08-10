@@ -11,6 +11,7 @@ import ExportPage from './pages/Export.jsx';
 import TrashPage from './pages/Trash.jsx';
 import ThemeEngine from './ThemeEngine.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import WaterRippleBackdrop from './components/WaterRippleBackdrop.jsx';
 import { getAuthSession, onAuthStateChange, signOut } from './db.js';
 import {
   LayoutDashboard, ClipboardList, Users, CalendarDays,
@@ -212,6 +213,7 @@ function PublicApp() {
 export default function App() {
   return (
     <BrowserRouter>
+      <WaterRippleBackdrop />
       <PublicApp />
     </BrowserRouter>
   );
