@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react';
 import { useStore, generateId, themePresets } from '../store.jsx';
+import { updateAccountEmail, updateAccountPassword } from '../db.js';
 import {
   Plus, Edit3, Trash2, X, Check, Download, Upload,
   Sparkles, AlertCircle, ShieldCheck, Copy, MessageCircle,
@@ -63,6 +64,31 @@ export default function Settings() {
   const [typeForm, setTypeForm] = useState({ name: '', defaultPrice: 168, defaultDuration: 1, emoji: '💄', desc: '' });
   const [newDate, setNewDate] = useState('');
   const [newAnnouncement, setNewAnnouncement] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [accountSaving, setAccountSaving] = useState(false);
+
+  const changeEmail = async () => {
+    if (!newEmail.trim()) return;
+    setAccountSaving(true);
+    try {
+      await updateAccountEmail(newEmail.trim());
+      setNewEmail('');
+      showMsg('验证邮件已发送，请到新邮箱确认');
+    } catch (error) { showMsg(error.message || '邮箱修改失败', 'error'); }
+    finally { setAccountSaving(false); }
+  };
+
+  const changePassword = async () => {
+    if (newPassword.length < 10) { showMsg('新密码至少需要 10 位', 'error'); return; }
+    setAccountSaving(true);
+    try {
+      await updateAccountPassword(newPassword);
+      setNewPassword('');
+      showMsg('管理员密码已更新');
+    } catch (error) { showMsg(error.message || '密码修改失败', 'error'); }
+    finally { setAccountSaving(false); }
+  };
 
   const handleSaveType = () => {
     if (!typeForm.name.trim()) return;
@@ -566,9 +592,27 @@ export default function Settings() {
         <h3 className="font-semibold text-warm-800 mb-4 flex items-center gap-2">
           <Lock className="w-4 h-4 text-rose-400" /> 账号安全
         </h3>
-        <p className="text-sm text-warm-800/55 leading-6">
-          后台已改用 Supabase Auth 验证。密码不再保存在浏览器中，请在 Supabase 的 Authentication 页面修改管理员密码。
+        <p className="text-sm text-warm-800/55 leading-6 mb-4">
+          邮箱和密码只由 Supabase 安全处理，不会写进网页代码。修改邮箱后，需要到新邮箱点击确认链接。
         </p>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="rounded-2xl bg-brand-50/50 border border-brand-100 p-4">
+            <label className="block text-xs font-semibold text-warm-800/60 mb-2">新的管理员邮箱</label>
+            <div className="flex gap-2">
+              <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="建议使用专门的工作邮箱"
+                className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+              <button disabled={accountSaving || !newEmail.trim()} onClick={changeEmail} className="px-4 py-2.5 rounded-xl bg-[#29533a] text-white text-sm font-semibold disabled:opacity-40">更改邮箱</button>
+            </div>
+          </div>
+          <div className="rounded-2xl bg-brand-50/50 border border-brand-100 p-4">
+            <label className="block text-xs font-semibold text-warm-800/60 mb-2">新的管理员密码</label>
+            <div className="flex gap-2">
+              <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="至少 10 位，建议混合字母和数字"
+                className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
+              <button disabled={accountSaving || newPassword.length < 10} onClick={changePassword} className="px-4 py-2.5 rounded-xl bg-[#29533a] text-white text-sm font-semibold disabled:opacity-40">更改密码</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ========== 数据管理 ========== */}

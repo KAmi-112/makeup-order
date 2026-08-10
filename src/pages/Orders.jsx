@@ -1,9 +1,12 @@
 ﻿import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useRef } from 'react';
 import { useStore, generateId, sources, statusLabels, statusColors, paymentLabels, paymentColors, statuses, paymentStatuses } from '../store.jsx';
 import {
   Plus, Search, Filter, X, Edit3, Trash2, ChevronDown,
-  Sparkles, Copy, FileDown, MoreHorizontal, CheckCircle2, Eye, Printer, Brush
+  Sparkles, Copy, FileDown, MoreHorizontal, CheckCircle2, Eye, Printer, Brush,
+  ArchiveRestore, BadgeCheck, WalletCards, MousePointer2
 } from 'lucide-react';
 
 /* ---- 生成可选时间段 ---- */
@@ -113,7 +116,7 @@ function OrderForm({ order, onClose }) {
   };
 
   const handleDelete = () => {
-    if (window.confirm('确定要删除这个订单吗？此操作不可撤销。')) {
+    if (window.confirm('将这个订单移入回收站？之后仍可恢复。')) {
       dispatch({ type: 'DELETE_ORDER', payload: form.id });
       onClose();
     }
@@ -338,6 +341,8 @@ export default function Orders() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
+  const dragSelection = useRef({ active: false, mode: 'add' });
+  const lastSelectedIndex = useRef(null);
 
   // 响应式每页数量
   const [perPage, setPerPage] = useState(window.innerWidth < 768 ? 8 : 20);
@@ -403,7 +408,7 @@ export default function Orders() {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm('确定删除此订单？')) {
+    if (window.confirm('将此订单移入回收站？之后仍可恢复。')) {
       dispatch({ type: 'DELETE_ORDER', payload: id });
     }
   };
@@ -497,7 +502,7 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
   };
 
   const batchDelete = () => {
-    if (window.confirm(`确定删除选中的 ${selectedIds.size} 个订单？`)) {
+    if (window.confirm(`将选中的 ${selectedIds.size} 个订单移入回收站？`)) {
       selectedIds.forEach(id => dispatch({ type: 'DELETE_ORDER', payload: id }));
       setSelectedIds(new Set());
     }
@@ -521,14 +526,47 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
     a.click(); URL.revokeObjectURL(url);
   };
 
-  const toggleSelect = (id) => {
+  const toggleSelect = (id, shiftKey = false) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
+      const currentIndex = filteredOrders.findIndex(order => order.id === id);
+      if (shiftKey && lastSelectedIndex.current !== null && currentIndex >= 0) {
+        const [start, end] = [lastSelectedIndex.current, currentIndex].sort((a, b) => a - b);
+        filteredOrders.slice(start, end + 1).forEach(order => next.add(order.id));
+      } else if (next.has(id)) next.delete(id);
       else next.add(id);
+      lastSelectedIndex.current = currentIndex;
       return next;
     });
   };
+
+  const beginDragSelect = (event, id) => {
+    if (event.button !== 0 || event.target.closest('button, select, input, a')) return;
+    event.preventDefault();
+    const mode = selectedIds.has(id) ? 'remove' : 'add';
+    dragSelection.current = { active: true, mode };
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (mode === 'add') next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
+  const continueDragSelect = id => {
+    if (!dragSelection.current.active) return;
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (dragSelection.current.mode === 'add') next.add(id); else next.delete(id);
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const stop = () => { dragSelection.current.active = false; };
+    window.addEventListener('mouseup', stop);
+    window.addEventListener('blur', stop);
+    return () => { window.removeEventListener('mouseup', stop); window.removeEventListener('blur', stop); };
+  }, []);
   const toggleAll = () => {
     setSelectedIds(selectedIds.size === filteredOrders.length ? new Set() : new Set(filteredOrders.map(o => o.id)));
   };
@@ -539,6 +577,9 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-xl font-bold text-warm-800 font-heading">订单管理 ({filteredOrders.length})</h2>
         <div className="flex items-center gap-2">
+          <Link to="/trash" className="flex items-center gap-1.5 px-3 py-2.5 text-sm text-warm-800/55 hover:bg-warm-100 rounded-xl transition-colors">
+            <ArchiveRestore className="w-4 h-4" /> 回收站{state.trashedOrders.length > 0 ? ` ${state.trashedOrders.length}` : ''}
+          </Link>
           <button onClick={exportCSV}
             className="flex items-center gap-1.5 px-4 py-2.5 text-sm text-warm-800/60 hover:bg-warm-100 rounded-xl transition-colors"
             disabled={filteredOrders.length === 0}>
@@ -551,16 +592,21 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
         </div>
       </div>
 
+      <div className="hidden lg:flex items-center gap-2 text-xs text-warm-800/45 px-1">
+        <MousePointer2 className="w-3.5 h-3.5" />
+        在订单行空白处按住鼠标拖过多行可批量选择；按住 Shift 点击复选框可连续选择。
+      </div>
+
       {/* Batch action bar */}
       {selectedIds.size > 0 && (
         <div className="bg-brand-50 rounded-2xl border border-brand-200 p-3 flex items-center gap-2 flex-wrap animate-scale-in">
           <span className="text-sm font-semibold text-brand-600 mr-2">已选 {selectedIds.size} 项</span>
-          <button onClick={() => batchUpdateStatus('confirmed')} className="px-3 py-1.5 text-xs font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600">✓ 批量确认</button>
+          <button onClick={() => batchUpdateStatus('confirmed')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600"><BadgeCheck className="w-3.5 h-3.5" />批量确认</button>
           <button onClick={() => batchUpdateStatus('rejected')} className="px-3 py-1.5 text-xs font-semibold bg-red-500 text-white rounded-lg hover:bg-red-600">✕ 批量拒绝</button>
-          <button onClick={() => batchUpdatePayment('deposit')} className="px-3 py-1.5 text-xs font-semibold bg-amber-500 text-white rounded-lg hover:bg-amber-600">💵 批量定金</button>
+          <button onClick={() => batchUpdatePayment('deposit')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-amber-500 text-white rounded-lg hover:bg-amber-600"><WalletCards className="w-3.5 h-3.5" />批量定金</button>
           <button onClick={() => batchUpdatePayment('full')} className="px-3 py-1.5 text-xs font-semibold bg-emerald-500 text-white rounded-lg hover:bg-emerald-600">💰 批量全款</button>
-          <button onClick={() => exportCSV(true)} className="px-3 py-1.5 text-xs font-semibold bg-violet-500 text-white rounded-lg hover:bg-violet-600">📥 导出选中</button>
-          <button onClick={batchDelete} className="px-3 py-1.5 text-xs font-semibold bg-gray-500 text-white rounded-lg hover:bg-gray-600 ml-auto"> 删除</button>
+          <button onClick={() => exportCSV(true)} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-violet-500 text-white rounded-lg hover:bg-violet-600"><FileDown className="w-3.5 h-3.5" />导出选中</button>
+          <button onClick={batchDelete} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold bg-gray-600 text-white rounded-lg hover:bg-gray-700 ml-auto"><ArchiveRestore className="w-3.5 h-3.5" />移入回收站</button>
           <button onClick={() => setSelectedIds(new Set())} className="px-3 py-1.5 text-xs text-brand-600">取消选择</button>
         </div>
       )}
@@ -685,10 +731,11 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
               </thead>
               <tbody>
                 {pageOrders.map(o => (
-                  <tr key={o.id} className="border-b border-brand-50 hover:bg-brand-50/30 transition-colors group">
+                  <tr key={o.id} onMouseDown={event => beginDragSelect(event, o.id)} onMouseEnter={() => continueDragSelect(o.id)}
+                    className={`border-b border-brand-50 transition-colors group select-none ${selectedIds.has(o.id) ? 'bg-brand-50/70' : 'hover:bg-brand-50/30'}`}>
                     <td className="px-4 py-3">
                       <input type="checkbox" className="accent-brand-500 rounded"
-                        checked={selectedIds.has(o.id)} onChange={() => toggleSelect(o.id)} />
+                        checked={selectedIds.has(o.id)} onChange={event => toggleSelect(o.id, event.nativeEvent.shiftKey)} />
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">

@@ -8,17 +8,19 @@ import Calendar from './pages/Calendar.jsx';
 import Statistics from './pages/Statistics.jsx';
 import Settings from './pages/Settings.jsx';
 import ExportPage from './pages/Export.jsx';
+import TrashPage from './pages/Trash.jsx';
 import ThemeEngine from './ThemeEngine.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import { getAuthSession, onAuthStateChange, signOut } from './db.js';
 import {
   LayoutDashboard, ClipboardList, Users, CalendarDays,
-  BarChart3, SettingsIcon, Flower2, Download
+  BarChart3, SettingsIcon, Flower2, Download, ArchiveRestore
 } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '仪表盘', end: true },
   { to: '/orders', icon: ClipboardList, label: '订单' },
+  { to: '/trash', icon: ArchiveRestore, label: '回收站', desktopOnly: true },
   { to: '/customers', icon: Users, label: '客户' },
   { to: '/calendar', icon: CalendarDays, label: '日历' },
   { to: '/statistics', icon: BarChart3, label: '统计' },
@@ -76,7 +78,7 @@ function MobileBottomBar() {
     <nav className="lg:hidden bg-white/95 backdrop-blur-md border-t border-brand-100 shrink-0 safe-bottom"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="flex items-center justify-around h-14 px-1">
-        {navItems.map(item => (
+        {navItems.filter(item => !item.desktopOnly).map(item => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -197,6 +199,7 @@ function PublicApp() {
         <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/trash" element={<TrashPage />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/statistics" element={<Statistics />} />

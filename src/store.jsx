@@ -23,6 +23,7 @@ const defaultExtraServices = [
 function getInitialState() {
   return {
     orders: [],
+    trashedOrders: [],
     makeupTypes: defaultMakeupTypes,
     extraServices: defaultExtraServices,
     notice: '',
@@ -47,6 +48,7 @@ function reducer(state, action) {
       return {
         ...state,
         orders: action.payload.orders,
+        trashedOrders: action.payload.trashedOrders || [],
         makeupTypes: action.payload.makeupTypes.length > 0 ? action.payload.makeupTypes : state.makeupTypes,
         extraServices: action.payload.extraServices.length > 0 ? action.payload.extraServices : state.extraServices,
         notice: action.payload.notice || state.notice,
@@ -63,8 +65,16 @@ function reducer(state, action) {
       return { ...state, orders: [...state.orders, action.payload] };
     case 'UPDATE_ORDER':
       return { ...state, orders: state.orders.map(o => o.id === action.payload.id ? action.payload : o) };
-    case 'DELETE_ORDER':
-      return { ...state, orders: state.orders.filter(o => o.id !== action.payload) };
+    case 'DELETE_ORDER': {
+      const order = state.orders.find(o => o.id === action.payload);
+      return { ...state, orders: state.orders.filter(o => o.id !== action.payload), trashedOrders: order ? [{ ...order, deletedAt: new Date().toISOString() }, ...state.trashedOrders] : state.trashedOrders };
+    }
+    case 'RESTORE_ORDER': {
+      const order = state.trashedOrders.find(o => o.id === action.payload);
+      return { ...state, trashedOrders: state.trashedOrders.filter(o => o.id !== action.payload), orders: order ? [{ ...order, deletedAt: null }, ...state.orders] : state.orders };
+    }
+    case 'PERMANENT_DELETE_ORDER':
+      return { ...state, trashedOrders: state.trashedOrders.filter(o => o.id !== action.payload) };
 
     case 'ADD_MAKEUP_TYPE':
       return { ...state, makeupTypes: [...state.makeupTypes, action.payload] };
@@ -114,10 +124,11 @@ export function StoreProvider({ children }) {
     async function load() {
       try {
         const orders = await db.fetchOrders();
+        const trashedOrders = await db.fetchTrashedOrders();
         const settings = await db.fetchSettings();
         dispatch({
           type: 'LOAD_DATA',
-          payload: { orders, ...settings },
+          payload: { orders, trashedOrders, ...settings },
         });
       } catch (e) {
         console.error('Failed to load data:', e);
@@ -146,6 +157,12 @@ export function StoreProvider({ children }) {
           break;
         case 'DELETE_ORDER':
           await db.deleteOrder(action.payload);
+          break;
+        case 'RESTORE_ORDER':
+          await db.restoreOrder(action.payload);
+          break;
+        case 'PERMANENT_DELETE_ORDER':
+          await db.permanentlyDeleteOrder(action.payload);
           break;
         case 'ADD_MAKEUP_TYPE':
         case 'UPDATE_MAKEUP_TYPE':

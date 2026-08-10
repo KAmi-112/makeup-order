@@ -36,6 +36,20 @@ export async function signOut() {
   if (supabase) await supabase.auth.signOut();
 }
 
+export async function updateAccountEmail(email) {
+  if (!supabase) throw new Error('云端服务未配置');
+  const { data, error } = await supabase.auth.updateUser({ email });
+  if (error) throw error;
+  return data.user;
+}
+
+export async function updateAccountPassword(password) {
+  if (!supabase) throw new Error('云端服务未配置');
+  const { data, error } = await supabase.auth.updateUser({ password });
+  if (error) throw error;
+  return data.user;
+}
+
 export function onAuthStateChange(callback) {
   if (!supabase) return { unsubscribe: () => {} };
   const { data } = supabase.auth.onAuthStateChange((_event, session) => callback(session));
@@ -44,9 +58,16 @@ export function onAuthStateChange(callback) {
 
 export async function fetchOrders() {
   if (!cloudReady) return localGet()?.orders ?? [];
-  const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+  const { data, error } = await supabase.from('orders').select('*').is('deleted_at', null).order('created_at', { ascending: false });
   if (error) return [];
   const local = localGet() || {}; local.orders = data.map(mapOrderFromDB); localSet(local);
+  return data.map(mapOrderFromDB);
+}
+
+export async function fetchTrashedOrders() {
+  if (!cloudReady) return localGet()?.trashedOrders ?? [];
+  const { data, error } = await supabase.from('orders').select('*').not('deleted_at', 'is', null).order('deleted_at', { ascending: false });
+  if (error) throw error;
   return data.map(mapOrderFromDB);
 }
 
@@ -63,8 +84,23 @@ export async function updateOrder(order) {
 }
 
 export async function deleteOrder(id) {
-  if (!cloudReady) { const l=localGet()||{orders:[]}; l.orders=l.orders.filter(o=>o.id!==id); localSet(l); return; }
-  const { error } = await supabase.from('orders').delete().eq('id', id);
+  const deletedAt = new Date().toISOString();
+  if (!cloudReady) { const l=localGet()||{orders:[],trashedOrders:[]}; const order=l.orders.find(o=>o.id===id); l.orders=l.orders.filter(o=>o.id!==id); if(order)l.trashedOrders=[{...order,deletedAt},...(l.trashedOrders||[])]; localSet(l); return deletedAt; }
+  const { data: authData } = await supabase.auth.getUser();
+  const { error } = await supabase.from('orders').update({ deleted_at: deletedAt, deleted_by: authData?.user?.id || null }).eq('id', id);
+  if (error) throw error;
+  return deletedAt;
+}
+
+export async function restoreOrder(id) {
+  if (!cloudReady) { const l=localGet()||{orders:[],trashedOrders:[]}; const order=(l.trashedOrders||[]).find(o=>o.id===id); l.trashedOrders=(l.trashedOrders||[]).filter(o=>o.id!==id); if(order)l.orders=[{...order,deletedAt:null},...(l.orders||[])]; localSet(l); return; }
+  const { error } = await supabase.from('orders').update({ deleted_at: null, deleted_by: null }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function permanentlyDeleteOrder(id) {
+  if (!cloudReady) { const l=localGet()||{trashedOrders:[]}; l.trashedOrders=(l.trashedOrders||[]).filter(o=>o.id!==id); localSet(l); return; }
+  const { error } = await supabase.from('orders').delete().eq('id', id).not('deleted_at', 'is', null);
   if (error) throw error;
 }
 
@@ -91,5 +127,5 @@ export function subscribeToOrders(cb) {
 }
 
 function mapOrderToDB(o){return{id:o.id,customer_name:o.customerName,customer_phone:o.customerPhone||'',customer_wechat:o.customerWechat||'',date:o.date,time:o.time,duration:o.duration,location:o.location||'',makeup_type:o.makeupType,price:o.price,deposit:o.deposit||0,source:o.source,status:o.status,payment_status:o.paymentStatus,notes:o.notes||'',extra_services:o.extraServices||[],created_at:o.createdAt}}
-function mapOrderFromDB(r){return{id:r.id,customerName:r.customer_name,customerPhone:r.customer_phone||'',customerWechat:r.customer_wechat||'',date:r.date,time:r.time,duration:r.duration,location:r.location||'',makeupType:r.makeup_type,price:r.price,deposit:r.deposit||0,source:r.source,status:r.status,paymentStatus:r.payment_status,notes:r.notes||'',extraServices:r.extra_services||[],createdAt:r.created_at}}
+function mapOrderFromDB(r){return{id:r.id,customerName:r.customer_name,customerPhone:r.customer_phone||'',customerWechat:r.customer_wechat||'',date:r.date,time:r.time,duration:r.duration,location:r.location||'',makeupType:r.makeup_type,price:r.price,deposit:r.deposit||0,source:r.source,status:r.status,paymentStatus:r.payment_status,notes:r.notes||'',extraServices:r.extra_services||[],createdAt:r.created_at,deletedAt:r.deleted_at||null}}
 export { cloudReady };
