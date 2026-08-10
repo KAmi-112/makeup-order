@@ -1,21 +1,21 @@
 ﻿import { useMemo } from 'react';
 import { useStore, paymentLabels, statusLabels, statusColors } from '../store.jsx';
 import { useNavigate } from 'react-router-dom';
-import { DollarSign, ClipboardList, CalendarDays, Users, Clock, TrendingUp, Sparkles, ArrowRight, Sun, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning, PartyPopper } from 'lucide-react';
+import { DollarSign, ClipboardList, CalendarDays, Users, Clock, TrendingUp, Sparkles, ArrowRight, Sun, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning, PartyPopper, CircleAlert, WalletCards } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchWeather } from '../utils/weather.js';
 import { getHoliday, upcomingHolidays } from '../utils/holidays.js';
 
 /* ---- 统计卡片 ---- */
-function StatCard({ icon: Icon, title, value, sub, gradient, delay = 0 }) {
-  const gradients = {
-    peach:  'from-[#d69ba6] to-[#b96f7e]',
-    orange: 'from-[#d4a85f] to-[#b77b32]',
-    blue:   'from-[#6d8d8a] to-[#476d69]',
-    rose:   'from-[#67a17a] to-[#356f4c]',
+function StatCard({ icon: Icon, title, value, sub, gradient }) {
+  const tones = {
+    peach:  'bg-[#fbebef] text-[#bd6076]',
+    orange: 'bg-[#faf2e3] text-[#a97835]',
+    blue:   'bg-[#eaf2f0] text-[#557d77]',
+    rose:   'bg-[#e9f3eb] text-[#568167]',
   };
   return (
-    <div className="group panel-luxe rounded-[22px] p-5 transition-all duration-300 cursor-default stagger-item hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(35,68,48,.12)]">
+    <div className="group panel-luxe rounded-[18px] p-5 transition-all duration-200 cursor-default stagger-item hover:border-[#cadbcf] hover:shadow-[0_12px_34px_rgba(61,99,72,.07)]">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-xs text-warm-muted font-medium mb-2 tracking-wide uppercase">{title}</p>
@@ -24,8 +24,8 @@ function StatCard({ icon: Icon, title, value, sub, gradient, delay = 0 }) {
             <TrendingUp className="w-3 h-3 text-emerald-500" /> {sub}
           </p>}
         </div>
-        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradients[gradient] || gradients.peach} flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform shrink-0`}>
-          <Icon className="w-6 h-6 text-white" strokeWidth={1.5} />
+        <div className={`w-11 h-11 rounded-[14px] ${tones[gradient] || tones.peach} flex items-center justify-center shrink-0`}>
+          <Icon className="w-5 h-5" strokeWidth={1.6} />
         </div>
       </div>
     </div>
@@ -90,25 +90,40 @@ export default function Dashboard() {
       .slice(0, 8);
   }, [state.orders]);
 
+  const attention = useMemo(() => {
+    const pending = state.orders.filter(o => o.status === 'pending').length;
+    const unpaid = state.orders.filter(o => !['cancelled', 'rejected'].includes(o.status) && o.paymentStatus === 'unpaid').length;
+    return { pending, unpaid };
+  }, [state.orders]);
+
+  const greeting = new Date().getHours() < 12 ? '上午好' : new Date().getHours() < 18 ? '下午好' : '晚上好';
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
       {/* Welcome */}
-      <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-[#edf8ef] via-[#fffaf9] to-[#f8dfe5] text-[#355844] px-6 py-7 md:px-9 md:py-8 border border-white shadow-[0_22px_60px_rgba(91,132,102,.11)] flex items-center justify-between flex-wrap gap-5">
-        <img src={`${import.meta.env.BASE_URL}lotus-watercolor.webp`} alt="" className="absolute inset-0 w-full h-full object-cover object-center opacity-[.15] mix-blend-multiply pointer-events-none" />
-        <div className="absolute -right-24 -top-24 w-72 h-72 rounded-full border border-[#d98ba0]/25 bg-white/25" />
-        <div className="absolute right-8 -bottom-28 w-64 h-64 rounded-full bg-[#e59bae]/25 blur-2xl" />
+      <div className="relative overflow-hidden rounded-[24px] bg-[#fffefb] text-[#355844] px-6 py-7 md:px-9 md:py-8 border border-[#dfe9e1] shadow-[0_10px_36px_rgba(74,108,83,.06)] flex items-center justify-between flex-wrap gap-5">
+        <img src={`${import.meta.env.BASE_URL}lotus-watercolor.webp`} alt="" className="absolute inset-0 w-full h-full object-cover object-center opacity-[.20] mix-blend-multiply pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/64 to-white/20 pointer-events-none" />
         <div className="relative">
           <p className="text-[11px] tracking-[.24em] text-[#c7627a] mb-2">小荷·今日工作台</p>
-          <h2 className="text-3xl md:text-4xl font-semibold font-heading tracking-wide">下午好，小荷</h2>
+          <h2 className="text-3xl md:text-4xl font-semibold font-heading tracking-wide">{greeting}，小荷</h2>
           <p className="text-sm text-[#6f8878] mt-2">
             {new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
           </p>
         </div>
         <button onClick={() => navigate('/orders?new=1')}
-          className="relative flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-[#df8298] to-[#ec9caf] text-white text-sm font-bold rounded-xl shadow-[0_12px_28px_rgba(220,127,149,.24)] hover:-translate-y-0.5 transition-all active:scale-95">
+          className="relative flex items-center gap-2 px-5 py-3 bg-[#cf7188] text-white text-sm font-bold rounded-xl shadow-[0_8px_22px_rgba(201,99,123,.18)] hover:bg-[#bd6078] transition-all active:scale-95">
           <Sparkles className="w-4 h-4" /> 新建预约
         </button>
       </div>
+
+      {(attention.pending > 0 || attention.unpaid > 0) && (
+        <div className="flex items-center gap-3 flex-wrap rounded-2xl border border-[#e5ece6] bg-white/75 px-4 py-3">
+          <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-[.12em] text-[#668071] mr-1"><CircleAlert className="w-4 h-4 text-[#c86f84]" />今日关注</span>
+          {attention.pending > 0 && <button onClick={() => navigate('/orders?status=pending')} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#fff3f6] text-[#a95469] text-sm hover:bg-[#fce8ed]"><ClipboardList className="w-4 h-4" />{attention.pending} 笔订单待确认</button>}
+          {attention.unpaid > 0 && <button onClick={() => navigate('/orders?payment=unpaid')} className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#f1f7f2] text-[#51775d] text-sm hover:bg-[#e8f2ea]"><WalletCards className="w-4 h-4" />{attention.unpaid} 笔订单待收款</button>}
+        </div>
+      )}
 
       {/* Weather + Holiday row */}
       {(weather || upcomingHolidays().length > 0) && (

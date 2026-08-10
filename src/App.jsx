@@ -23,15 +23,15 @@ const navItems = [
   { to: '/trash', icon: ArchiveRestore, label: '回收站', desktopOnly: true },
   { to: '/customers', icon: Users, label: '客户' },
   { to: '/calendar', icon: CalendarDays, label: '日历' },
-  { to: '/statistics', icon: BarChart3, label: '统计' },
+  { to: '/statistics', icon: BarChart3, label: '统计', mobileHidden: true },
   { to: '/settings', icon: SettingsIcon, label: '设置' },
-  { to: '/export', icon: Download, label: '导出' },
+  { to: '/export', icon: Download, label: '导出', mobileHidden: true },
 ];
 
 /* ======== Desktop Sidebar ======== */
 function DesktopSidebar() {
   return (
-    <aside className="hidden lg:flex flex-col w-[260px] bg-gradient-to-b from-[#f4fbf5] via-[#fffafb] to-[#fffdf9] text-[#355844] shrink-0 border-r border-[#e7eee8] relative overflow-hidden shadow-[10px_0_35px_rgba(86,128,99,.05)]">
+    <aside className="hidden lg:flex flex-col w-[248px] bg-[#fcfdf9] text-[#355844] shrink-0 border-r border-[#e8eee8] relative overflow-hidden">
       <img src={`${import.meta.env.BASE_URL}lotus-watercolor.webp`} alt="" className="absolute inset-x-0 bottom-0 w-full h-52 object-cover object-left-bottom opacity-[.16] pointer-events-none mix-blend-multiply" />
       <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-[#f9dbe2]/45" />
       <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full border border-[#e9b8c4]/40" />
@@ -55,8 +55,8 @@ function DesktopSidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? 'bg-[#f9e4e9] text-[#a64e66] shadow-[inset_0_0_0_1px_rgba(222,127,150,.12),0_8px_22px_rgba(222,127,150,.10)]'
-                  : 'text-[#66806e] hover:bg-[#edf6ef] hover:text-[#3d6d4d]'
+                  ? 'bg-[#edf5ef] text-[#3f7652] shadow-[inset_3px_0_0_#dc7f95]'
+                  : 'text-[#738579] hover:bg-[#f3f7f3] hover:text-[#4d7259]'
               }`
             }
           >
@@ -79,7 +79,7 @@ function MobileBottomBar() {
     <nav className="lg:hidden bg-white/95 backdrop-blur-md border-t border-brand-100 shrink-0 safe-bottom"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="flex items-center justify-around h-14 px-1">
-        {navItems.filter(item => !item.desktopOnly).map(item => (
+        {navItems.filter(item => !item.desktopOnly && !item.mobileHidden).map(item => (
           <NavLink
             key={item.to}
             to={item.to}

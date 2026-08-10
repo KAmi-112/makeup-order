@@ -1,6 +1,6 @@
 ﻿import { useState, useMemo } from 'react';
 import { useStore, statusLabels, statusColors, paymentLabels } from '../store.jsx';
-import { ChevronLeft, ChevronRight, Clock, Download, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, Download, Printer, Copy, BarChart3, Banknote, CalendarDays } from 'lucide-react';
 
 export default function Calendar() {
   const { state } = useStore();
@@ -178,7 +178,7 @@ ${monthOrders.map(o => {
     <div className="max-w-6xl mx-auto space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-xl font-bold text-warm-800">📅 排期日历</h2>
+        <h2 className="text-xl font-bold text-warm-800 font-heading flex items-center gap-2"><CalendarDays className="w-5 h-5 text-brand-500" />排期日历</h2>
         <div className="flex items-center gap-2">
           <button onClick={prevMonth} className="p-2 rounded-xl hover:bg-white transition-colors">
             <ChevronLeft className="w-4 h-4 text-warm-800" />
@@ -193,19 +193,19 @@ ${monthOrders.map(o => {
           </button>
           <button onClick={printView}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-brand-200 text-brand-600 rounded-xl hover:bg-brand-50 transition-colors">
-            🖨 打印
+            <Printer className="w-4 h-4" />打印
           </button>
           <button onClick={copyText}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-brand-200 text-brand-600 rounded-xl hover:bg-brand-50 transition-colors">
-            卡片 复制文本
+            <Copy className="w-4 h-4" />复制文本
           </button>
         </div>
       </div>
 
       {/* Stats */}
       <div className="flex items-center gap-4 text-sm">
-        <span className="text-warm-800/60">📊 当月 <strong className="text-warm-800">{state.orders.filter(o => {const d=new Date(o.date);return d.getMonth()===month&&d.getFullYear()===year;}).length}</strong> 单</span>
-        <span className="text-warm-800/60">💰 收入 <strong className="text-brand-600">¥{monthIncome.toLocaleString()}</strong></span>
+        <span className="text-warm-800/60 inline-flex items-center gap-1.5"><BarChart3 className="w-4 h-4 text-[#6f927a]" />当月 <strong className="text-warm-800">{state.orders.filter(o => {const d=new Date(o.date);return d.getMonth()===month&&d.getFullYear()===year;}).length}</strong> 单</span>
+        <span className="text-warm-800/60 inline-flex items-center gap-1.5"><Banknote className="w-4 h-4 text-brand-500" />收入 <strong className="text-brand-600">¥{monthIncome.toLocaleString()}</strong></span>
       </div>
 
       <div className="grid lg:grid-cols-[280px_1fr] gap-4">

@@ -333,8 +333,8 @@ export default function Orders() {
   const [editingOrder, setEditingOrder] = useState(null);
   const [viewCardOrder, setViewCardOrder] = useState(null);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [paymentFilter, setPaymentFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
+  const [paymentFilter, setPaymentFilter] = useState(searchParams.get('payment') || 'all');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [makeupFilter, setMakeupFilter] = useState('all');
   const [sortBy, setSortBy] = useState('smart');
