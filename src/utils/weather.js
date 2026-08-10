@@ -1,63 +1,82 @@
-/**
- * 天气服务 — 使用 Open-Meteo 免费 API（无需密钥）
- */
-
+/** Open-Meteo weather service for Hefei. No API key required. */
 const HEFEI = { lat: 31.82, lon: 117.23 };
+const CACHE_KEY = 'xiaohe_weather_cache_v2';
+const CACHE_MS = 30 * 60 * 1000;
 
-// 天气代码 → 中文+图标
 const weatherMap = {
-  0: { icon: '☀️', text: '晴' },
-  1: { icon: '🌤', text: '少云' },
-  2: { icon: '⛅', text: '多云' },
-  3: { icon: '☁️', text: '阴' },
-  45: { icon: '🌫', text: '雾' },
-  48: { icon: '🌫', text: '霜雾' },
-  51: { icon: '🌦', text: '小雨' },
-  53: { icon: '🌦', text: '中雨' },
-  55: { icon: '🌧', text: '大雨' },
-  61: { icon: '🌧', text: '阵雨' },
-  71: { icon: '❄️', text: '小雪' },
-  73: { icon: '❄️', text: '中雪' },
-  80: { icon: '🌦', text: '雷阵雨' },
-  95: { icon: '⛈', text: '雷暴' },
+  0: '晴', 1: '晴间多云', 2: '多云', 3: '阴',
+  45: '雾', 48: '雾凇',
+  51: '小毛毛雨', 53: '毛毛雨', 55: '较强毛毛雨',
+  56: '冻毛毛雨', 57: '较强冻毛毛雨',
+  61: '小雨', 63: '中雨', 65: '大雨',
+  66: '冻雨', 67: '较强冻雨',
+  71: '小雪', 73: '中雪', 75: '大雪', 77: '米雪',
+  80: '小阵雨', 81: '阵雨', 82: '强阵雨',
+  85: '小阵雪', 86: '强阵雪',
+  95: '雷暴', 96: '雷暴伴小冰雹', 99: '雷暴伴冰雹',
 };
 
-let cachedWeather = null;
-let cacheTime = 0;
+let memoryCache = null;
+let memoryCacheTime = 0;
+
+function readFallbackCache() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
+    if (cached?.data && Date.now() - cached.savedAt < 6 * 60 * 60 * 1000) return cached.data;
+  } catch { /* unavailable storage */ }
+  return null;
+}
+
+function weatherText(code) {
+  return weatherMap[Number(code)] || '天气变化中';
+}
 
 export async function fetchWeather() {
-  // 缓存 30 分钟
-  if (cachedWeather && Date.now() - cacheTime < 30 * 60 * 1000) return cachedWeather;
+  if (memoryCache && Date.now() - memoryCacheTime < CACHE_MS) return memoryCache;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${HEFEI.lat}&longitude=${HEFEI.lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_probability_max&timezone=Asia/Shanghai&forecast_days=3`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    const now = data.current_weather;
-    const daily = data.daily;
+    const params = new URLSearchParams({
+      latitude: String(HEFEI.lat),
+      longitude: String(HEFEI.lon),
+      current: 'temperature_2m,weather_code,wind_speed_10m',
+      daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+      timezone: 'Asia/Shanghai',
+      forecast_days: '7',
+    });
+    const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal: controller.signal });
+    if (!response.ok) throw new Error(`天气服务返回 ${response.status}`);
+    const data = await response.json();
+    if (!data.current || !data.daily?.time?.length) throw new Error('天气数据格式异常');
 
     const result = {
       current: {
-        temp: Math.round(now.temperature),
-        icon: weatherMap[now.weathercode]?.icon || '🌡',
-        text: weatherMap[now.weathercode]?.text || '未知',
-        wind: now.windspeed,
+        temp: Math.round(data.current.temperature_2m),
+        text: weatherText(data.current.weather_code),
+        wind: Math.round(data.current.wind_speed_10m || 0),
       },
-      forecast: daily.time.slice(1).map((date, i) => ({
-        date: new Date(date).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
-        high: Math.round(daily.temperature_2m_max[i + 1]),
-        low: Math.round(daily.temperature_2m_min[i + 1]),
-        icon: weatherMap[daily.weathercode[i + 1]]?.icon || '🌡',
-        rain: daily.precipitation_probability_max?.[i + 1] || 0,
+      forecast: data.daily.time.map((isoDate, index) => ({
+        isoDate,
+        date: new Date(`${isoDate}T00:00:00+08:00`).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }),
+        high: Math.round(data.daily.temperature_2m_max[index]),
+        low: Math.round(data.daily.temperature_2m_min[index]),
+        text: weatherText(data.daily.weather_code[index]),
+        rain: data.daily.precipitation_probability_max?.[index] ?? 0,
       })),
+      stale: false,
     };
 
-    cachedWeather = result;
-    cacheTime = Date.now();
+    memoryCache = result;
+    memoryCacheTime = Date.now();
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: Date.now(), data: result })); } catch { /* unavailable storage */ }
     return result;
-  } catch (e) {
-    console.warn('天气获取失败:', e.message);
-    return cachedWeather || null;
+  } catch (error) {
+    const fallback = memoryCache || readFallbackCache();
+    if (fallback) return { ...fallback, stale: true };
+    console.warn('天气获取失败:', error.message);
+    return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }

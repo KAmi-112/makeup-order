@@ -30,15 +30,17 @@ function getCardConfig(name) {
 }
 
 /* ---- 生成可选时间段 ---- */
-function generateTimeSlots(date, duration, orders) {
-  const WORK_START = 7, WORK_END = 18;
+function generateTimeSlots(date, duration, orders, bookingRules) {
+  const WORK_START = parseInt(bookingRules?.workingHours?.start?.split(':')[0] || '7');
+  const WORK_END = parseInt(bookingRules?.workingHours?.end?.split(':')[0] || '18');
+  const bufferHours = Math.max(0, Number(bookingRules?.bufferMinutes || 0)) / 60;
   const slots = [];
   const bookedRanges = [];
   if (date) {
     orders.forEach(o => {
       if (o.date === date && o.status !== 'cancelled') {
         const startH = parseInt(o.time?.split(':')[0]) || 0;
-        bookedRanges.push({ start: startH, end: startH + (o.duration || 1) });
+        bookedRanges.push({ start: startH, end: startH + (o.duration || 1) + bufferHours });
       }
     });
   }
@@ -152,6 +154,10 @@ export default function Menu() {
 
   const handleCreateOrder = () => {
     if (!customerName.trim()) return;
+    if ((state.bookingRules?.blockedDates || []).includes(date)) {
+      alert('这一天是休息日，暂不接受预约。');
+      return;
+    }
     dispatch({
       type: 'ADD_ORDER',
       payload: {
@@ -186,10 +192,10 @@ export default function Menu() {
       try {
         const w = await fetchWeather();
         if (w) {
-          const target = w.forecast.find(f => date.includes(f.date.replace(/\D/g, '').slice(-4)) || f.date === date);
-          const dayWeather = target || (date === new Date().toISOString().slice(0,10) ? { icon: w.current.icon, high: w.current.temp, low: w.current.temp, text: w.current.text } : null);
+          const target = w.forecast.find(f => f.isoDate === date);
+          const dayWeather = target || (date === new Date().toISOString().slice(0,10) ? { high: w.current.temp, low: w.current.temp, text: w.current.text } : null);
           if (dayWeather) {
-            weatherLine = `🌤 天气：${dayWeather.icon || '🌡'} ${dayWeather.high || ''}${dayWeather.low ? '~'+dayWeather.low+'°C' : '°C'} ${dayWeather.text || ''}`;
+            weatherLine = `天气：${dayWeather.low ?? ''}${dayWeather.low != null && dayWeather.high != null ? '~' : ''}${dayWeather.high ?? ''}°C ${dayWeather.text || ''}`;
           }
         }
       } catch {}
@@ -445,15 +451,16 @@ export default function Menu() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[11px] font-semibold text-warm-800/50 uppercase tracking-wide mb-1">日期 *</label>
-                  <input type="date" required className="w-full px-4 py-3 rounded-xl bg-brand-50/30 border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition"
-                    value={date} onChange={e => setDate(e.target.value)} />
+                  <input type="date" required min={new Date().toISOString().slice(0, 10)} className="w-full px-4 py-3 rounded-xl bg-brand-50/30 border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition"
+                    value={date} onChange={e => { setDate(e.target.value); setTime(''); }} />
+                  {(state.bookingRules?.blockedDates || []).includes(date) && <p className="text-xs text-red-500 mt-1">休息日，请选择其他日期</p>}
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-warm-800/50 uppercase tracking-wide mb-1">时间 *</label>
                   <select required className="w-full px-4 py-3 rounded-xl bg-brand-50/30 border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 focus:border-transparent transition"
                     value={time} onChange={e => setTime(e.target.value)}>
                     <option value="">选择时间</option>
-                    {generateTimeSlots(date, selectedTypeData?.defaultDuration || 1, state.orders).map(t => (
+                    {generateTimeSlots(date, selectedTypeData?.defaultDuration || 1, state.orders, state.bookingRules).map(t => (
                       <option key={t.value} value={t.value} disabled={t.booked}>{t.label}</option>
                     ))}
                   </select>

@@ -6,7 +6,7 @@ import { useStore, generateId, sources, statusLabels, statusColors, paymentLabel
 import {
   Plus, Search, Filter, X, Edit3, Trash2, ChevronDown,
   Sparkles, Copy, FileDown, MoreHorizontal, CheckCircle2, Eye, Printer, Brush,
-  ArchiveRestore, BadgeCheck, WalletCards, MousePointer2
+  ArchiveRestore, BadgeCheck, WalletCards, MousePointer2, Tag, MessageSquareText
 } from 'lucide-react';
 
 /* ---- 生成可选时间段 ---- */
@@ -61,6 +61,7 @@ function OrderForm({ order, onClose }) {
     status: 'pending',
     paymentStatus: 'unpaid',
     notes: '',
+    tags: [],
     extraServices: [],
     createdAt: new Date().toISOString(),
   });
@@ -285,6 +286,18 @@ function OrderForm({ order, onClose }) {
               </div>
             )}
 
+            {/* Tags */}
+            <div>
+              <label className="block text-xs font-semibold text-warm-800 mb-1.5">订单标签</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {['漫展', '外出妆', '老客户', '重点注意'].map(tag => {
+                  const active = (form.tags || []).includes(tag);
+                  return <button key={tag} type="button" onClick={() => setForm(f => ({ ...f, tags: active ? (f.tags || []).filter(t => t !== tag) : [...(f.tags || []), tag] }))} className={`px-3 py-1.5 rounded-full text-xs border ${active ? 'bg-[#edf6ef] border-[#aacbb4] text-[#477257]' : 'bg-white border-brand-100 text-warm-800/45'}`}>{tag}</button>;
+                })}
+              </div>
+              <input value={(form.tags || []).join('、')} onChange={e => setForm(f => ({ ...f, tags: e.target.value.split(/[、,，]/).map(t => t.trim()).filter(Boolean).slice(0, 8) }))} placeholder="也可以输入自定义标签，用顿号分隔" className="w-full px-3 py-2.5 rounded-lg border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300" />
+            </div>
+
             {/* Notes */}
             <div>
               <label className="block text-xs font-semibold text-warm-800 mb-1.5">备注</label>
@@ -332,6 +345,7 @@ export default function Orders() {
   const [showForm, setShowForm] = useState(!!searchParams.get('new'));
   const [editingOrder, setEditingOrder] = useState(null);
   const [viewCardOrder, setViewCardOrder] = useState(null);
+  const [reminderOrder, setReminderOrder] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
   const [paymentFilter, setPaymentFilter] = useState(searchParams.get('payment') || 'all');
@@ -465,6 +479,12 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
   const handlePaymentChange = (order, newPayment) => {
     dispatch({ type: 'UPDATE_ORDER', payload: { ...order, paymentStatus: newPayment } });
   };
+
+  const renderReminder = (template, order) => template.content.replace(/\{(\w+)\}/g, (_, key) => ({
+    customerName: order.customerName || '', date: order.date || '', time: order.time || '',
+    makeupType: order.makeupType || '', location: order.location || '', price: order.price || 0,
+    deposit: order.deposit || 0, balance: (order.price || 0) - (order.deposit || 0),
+  })[key] ?? `{${key}}`);
 
   // 批量操作
   const batchUpdateStatus = (newStatus) => {
@@ -745,6 +765,7 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-warm-800 truncate max-w-[120px]">{o.customerName}</p>
                           {o.customerPhone && <p className="text-[11px] text-warm-800/40">{o.customerPhone}</p>}
+                          {(o.tags || []).length > 0 && <div className="flex flex-wrap gap-1 mt-1">{o.tags.slice(0, 2).map(tag => <span key={tag} className="text-[10px] px-1.5 py-0.5 rounded bg-[#edf6ef] text-[#537760]">{tag}</span>)}</div>}
                         </div>
                       </div>
                     </td>
@@ -795,6 +816,7 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
                           title="打印卡片">
                           <Printer className="w-3.5 h-3.5" />
                         </button>
+                        <button onClick={() => setReminderOrder(o)} className="p-1.5 rounded-lg hover:bg-[#edf6ef] text-warm-800/50 hover:text-[#52775e] transition-colors" title="客户提醒"><MessageSquareText className="w-3.5 h-3.5" /></button>
                         <button onClick={() => handleDelete(o.id)}
                           className="p-1.5 rounded-lg hover:bg-red-100 text-warm-800/50 hover:text-red-500 transition-colors"
                           title="删除">
@@ -853,6 +875,7 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
                 {o.source && <span className="text-sm text-warm-800/40 ml-1">{o.source}</span>}
               </div>
               {o.notes && (<p className="text-sm text-warm-800/60 mb-3 bg-warm-50 rounded-xl px-4 py-2.5">{o.notes}</p>)}
+              {(o.tags || []).length > 0 && <div className="flex flex-wrap gap-1.5 mb-3">{o.tags.map(tag => <span key={tag} className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-[#edf6ef] text-[#537760]"><Tag className="w-3 h-3" />{tag}</span>)}</div>}
               <div className="flex items-center gap-2 mb-3">
                 {o.status === 'pending' && (<>
                   <button onClick={() => handleStatusChange(o, 'confirmed')} className="flex-1 py-2.5 text-sm font-bold bg-blue-500 text-white rounded-xl active:bg-blue-600">确认预约</button>
@@ -865,6 +888,7 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
               <div className="flex items-center gap-2 pt-3 border-t border-brand-50">
                 <button onClick={() => handleEdit(o)} className="flex-1 py-2 text-sm font-semibold text-brand-600 bg-brand-50 rounded-xl active:bg-brand-100">编辑</button>
                 <button onClick={() => setViewCardOrder(o)} className="flex-1 py-2 text-sm font-semibold text-emerald-600 bg-emerald-50 rounded-xl active:bg-emerald-100">卡片</button>
+                <button onClick={() => setReminderOrder(o)} className="flex-1 py-2 text-sm font-semibold text-[#52775e] bg-[#edf6ef] rounded-xl">提醒</button>
                 <button onClick={() => handleDelete(o.id)} className="py-2 px-3 text-sm font-semibold text-red-500 bg-red-50 rounded-xl active:bg-red-100"></button>
               </div>
             </div>
@@ -898,6 +922,13 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
 
       {/* Confirmation Card Modal */}
       {viewCardOrder && <OrderConfirmCard order={viewCardOrder} onClose={() => setViewCardOrder(null)} />}
+      {reminderOrder && <div className="fixed inset-0 z-50 grid place-items-center p-4">
+        <button aria-label="关闭" onClick={() => setReminderOrder(null)} className="absolute inset-0 bg-black/35 backdrop-blur-sm" />
+        <div className="relative bg-white rounded-3xl shadow-2xl border border-brand-100 w-full max-w-lg p-5">
+          <div className="flex items-center justify-between mb-4"><div><h3 className="font-semibold text-warm-800">客户提醒 · {reminderOrder.customerName}</h3><p className="text-xs text-warm-800/40 mt-1">点击模板即可复制，粘贴到微信发送</p></div><button onClick={() => setReminderOrder(null)} className="p-2"><X className="w-5 h-5" /></button></div>
+          <div className="space-y-3">{(state.reminderTemplates || []).map(template => { const text = renderReminder(template, reminderOrder); return <button key={template.id} onClick={async () => { await navigator.clipboard.writeText(text); alert(`“${template.name}”已复制`); }} className="w-full text-left rounded-2xl border border-brand-100 p-4 hover:bg-brand-50/50"><p className="text-sm font-semibold text-[#557762]">{template.name}</p><p className="text-sm text-warm-800/60 mt-2 leading-6">{text}</p></button>; })}</div>
+        </div>
+      </div>}
     </div>
   );
 }

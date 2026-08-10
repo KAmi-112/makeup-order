@@ -36,6 +36,54 @@ export async function signOut() {
   if (supabase) await supabase.auth.signOut();
 }
 
+export async function getMfaState() {
+  if (!supabase) return { currentLevel: 'aal1', nextLevel: 'aal1', factors: [] };
+  const [assurance, factorResult] = await Promise.all([
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+    supabase.auth.mfa.listFactors(),
+  ]);
+  if (assurance.error) throw assurance.error;
+  if (factorResult.error) throw factorResult.error;
+  return {
+    ...assurance.data,
+    factors: [...(factorResult.data?.totp || []), ...(factorResult.data?.phone || [])],
+  };
+}
+
+export async function verifyMfaCode(code, factorId) {
+  if (!supabase) throw new Error('云端服务未配置');
+  let selectedFactorId = factorId;
+  if (!selectedFactorId) {
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) throw error;
+    selectedFactorId = data.totp?.find(f => f.status === 'verified')?.id;
+  }
+  if (!selectedFactorId) throw new Error('没有可用的验证器');
+  const challenge = await supabase.auth.mfa.challenge({ factorId: selectedFactorId });
+  if (challenge.error) throw challenge.error;
+  const verify = await supabase.auth.mfa.verify({ factorId: selectedFactorId, challengeId: challenge.data.id, code });
+  if (verify.error) throw verify.error;
+  return verify.data;
+}
+
+export async function beginMfaEnrollment() {
+  if (!supabase) throw new Error('云端服务未配置');
+  const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: '小荷工作台' });
+  if (error) throw error;
+  return data;
+}
+
+export async function verifyMfaEnrollment(factorId, code) {
+  return verifyMfaCode(code, factorId);
+}
+
+export async function disableMfa(factorId) {
+  if (!supabase) throw new Error('云端服务未配置');
+  const { data, error } = await supabase.auth.mfa.unenroll({ factorId });
+  if (error) throw error;
+  return data;
+}
+
 export async function updateAccountEmail(email) {
   if (!supabase) throw new Error('云端服务未配置');
   const { data, error } = await supabase.auth.updateUser({ email });
@@ -69,6 +117,13 @@ export async function fetchTrashedOrders() {
   const { data, error } = await supabase.from('orders').select('*').not('deleted_at', 'is', null).order('deleted_at', { ascending: false });
   if (error) throw error;
   return data.map(mapOrderFromDB);
+}
+
+export async function fetchAuditLogs(limit = 200) {
+  if (!cloudReady) return [];
+  const { data, error } = await supabase.from('order_audit_logs').select('*').order('created_at', { ascending: false }).limit(limit);
+  if (error) throw error;
+  return data.map(row => ({ id: row.id, orderId: row.order_id, action: row.action, actorId: row.actor_id, createdAt: row.created_at }));
 }
 
 export async function addOrder(order) {
@@ -105,19 +160,19 @@ export async function permanentlyDeleteOrder(id) {
 }
 
 export async function fetchSettings() {
-  if (!cloudReady) { const l=localGet()||{}; return {makeupTypes:l.makeupTypes??[],extraServices:l.extraServices??[],notice:l.notice??'',theme:l.theme??'lotus',topQuotes:l.topQuotes??[]}; }
+  if (!cloudReady) { const l=localGet()||{}; return {makeupTypes:l.makeupTypes??[],extraServices:l.extraServices??[],notice:l.notice??'',theme:l.theme??'lotus',topQuotes:l.topQuotes??[],bookingRules:l.bookingRules??null,reminderTemplates:l.reminderTemplates??[]}; }
   const { data, error } = await supabase.from('settings').select('*').single();
-  if (error) return {makeupTypes:[],extraServices:[],notice:'',theme:'lotus',priceRules:null,announcements:[],topQuotes:[]};
-  if(!data) return {makeupTypes:[],extraServices:[],notice:'',theme:'lotus',priceRules:null,announcements:[],topQuotes:[]};
+  if (error) return {makeupTypes:[],extraServices:[],notice:'',theme:'lotus',priceRules:null,announcements:[],topQuotes:[],bookingRules:null,reminderTemplates:[]};
+  if(!data) return {makeupTypes:[],extraServices:[],notice:'',theme:'lotus',priceRules:null,announcements:[],topQuotes:[],bookingRules:null,reminderTemplates:[]};
   const types = (data.makeup_types||[]).map(t => ({...t, defaultPrice: t.price ?? t.defaultPrice ?? 0, defaultDuration: t.duration ?? t.defaultDuration ?? 1}));
-  return {makeupTypes:types,extraServices:data.extra_services??[],notice:data.notice??'',theme:data.theme??'lotus',priceRules:data.price_rules??null,announcements:data.announcements??[],topQuotes:data.top_quotes??[]};
+  return {makeupTypes:types,extraServices:data.extra_services??[],notice:data.notice??'',theme:data.theme??'lotus',priceRules:data.price_rules??null,announcements:data.announcements??[],topQuotes:data.top_quotes??[],bookingRules:data.booking_rules??null,reminderTemplates:data.reminder_templates??[]};
 }
 
 export async function saveSettings(s) {
   if (!cloudReady) { const l=localGet()||{}; Object.assign(l,s); localSet(l); return; }
   // 标准化字段：确保 price/duration 同步到 Supabase
   const types = (s.makeupTypes || []).map(t => ({...t, price: t.defaultPrice ?? t.price ?? 0, duration: t.defaultDuration ?? t.duration ?? 1}));
-  const { error } = await supabase.from('settings').upsert({id:1,makeup_types:types,extra_services:s.extraServices,notice:s.notice,theme:s.theme,price_rules:s.priceRules,announcements:s.announcements,top_quotes:s.topQuotes,updated_at:new Date().toISOString()});
+  const { error } = await supabase.from('settings').upsert({id:1,makeup_types:types,extra_services:s.extraServices,notice:s.notice,theme:s.theme,price_rules:s.priceRules,announcements:s.announcements,top_quotes:s.topQuotes,booking_rules:s.bookingRules,reminder_templates:s.reminderTemplates,updated_at:new Date().toISOString()});
   if (error) throw error;
 }
 
@@ -126,6 +181,6 @@ export function subscribeToOrders(cb) {
   try{return supabase.channel('o').on('postgres_changes',{event:'*',schema:'public',table:'orders'},p=>{if(p.eventType==='INSERT')cb({type:'ADD',order:mapOrderFromDB(p.new)});else if(p.eventType==='UPDATE')cb({type:'UPDATE',order:mapOrderFromDB(p.new)});else cb({type:'DELETE',id:p.old.id});}).subscribe()}catch{return{unsubscribe:()=>{}}}
 }
 
-function mapOrderToDB(o){return{id:o.id,customer_name:o.customerName,customer_phone:o.customerPhone||'',customer_wechat:o.customerWechat||'',date:o.date,time:o.time,duration:o.duration,location:o.location||'',makeup_type:o.makeupType,price:o.price,deposit:o.deposit||0,source:o.source,status:o.status,payment_status:o.paymentStatus,notes:o.notes||'',extra_services:o.extraServices||[],created_at:o.createdAt}}
-function mapOrderFromDB(r){return{id:r.id,customerName:r.customer_name,customerPhone:r.customer_phone||'',customerWechat:r.customer_wechat||'',date:r.date,time:r.time,duration:r.duration,location:r.location||'',makeupType:r.makeup_type,price:r.price,deposit:r.deposit||0,source:r.source,status:r.status,paymentStatus:r.payment_status,notes:r.notes||'',extraServices:r.extra_services||[],createdAt:r.created_at,deletedAt:r.deleted_at||null}}
+function mapOrderToDB(o){return{id:o.id,customer_name:o.customerName,customer_phone:o.customerPhone||'',customer_wechat:o.customerWechat||'',date:o.date,time:o.time,duration:o.duration,location:o.location||'',makeup_type:o.makeupType,price:o.price,deposit:o.deposit||0,source:o.source,status:o.status,payment_status:o.paymentStatus,notes:o.notes||'',extra_services:o.extraServices||[],tags:o.tags||[],created_at:o.createdAt}}
+function mapOrderFromDB(r){return{id:r.id,customerName:r.customer_name,customerPhone:r.customer_phone||'',customerWechat:r.customer_wechat||'',date:r.date,time:r.time,duration:r.duration,location:r.location||'',makeupType:r.makeup_type,price:r.price,deposit:r.deposit||0,source:r.source,status:r.status,paymentStatus:r.payment_status,notes:r.notes||'',extraServices:r.extra_services||[],tags:r.tags||[],createdAt:r.created_at,deletedAt:r.deleted_at||null}}
 export { cloudReady };

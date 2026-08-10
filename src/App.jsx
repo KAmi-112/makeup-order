@@ -9,23 +9,27 @@ import Statistics from './pages/Statistics.jsx';
 import Settings from './pages/Settings.jsx';
 import ExportPage from './pages/Export.jsx';
 import TrashPage from './pages/Trash.jsx';
+import Conflicts from './pages/Conflicts.jsx';
+import ActivityPage from './pages/Activity.jsx';
 import ThemeEngine from './ThemeEngine.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import WaterRippleBackdrop from './components/WaterRippleBackdrop.jsx';
-import { getAuthSession, onAuthStateChange, signOut } from './db.js';
+import { getAuthSession, getMfaState, onAuthStateChange, signOut, verifyMfaCode } from './db.js';
 import {
   LayoutDashboard, ClipboardList, Users, CalendarDays,
-  BarChart3, SettingsIcon, Flower2, Download, ArchiveRestore
+  BarChart3, SettingsIcon, Flower2, Download, ArchiveRestore, AlertTriangle, History, ShieldCheck
 } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: '仪表盘', end: true },
   { to: '/orders', icon: ClipboardList, label: '订单' },
+  { to: '/conflicts', icon: AlertTriangle, label: '冲突中心', mobileHidden: true },
   { to: '/trash', icon: ArchiveRestore, label: '回收站', desktopOnly: true },
   { to: '/customers', icon: Users, label: '客户' },
   { to: '/calendar', icon: CalendarDays, label: '日历' },
   { to: '/statistics', icon: BarChart3, label: '统计', mobileHidden: true },
   { to: '/settings', icon: SettingsIcon, label: '设置' },
+  { to: '/activity', icon: History, label: '操作记录', mobileHidden: true },
   { to: '/export', icon: Download, label: '导出', mobileHidden: true },
 ];
 
@@ -165,13 +169,48 @@ function Layout({ children, onLogout }) {
 }
 
 /* ======== App ======== */
+function MfaChallenge({ onSuccess, onCancel }) {
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const submit = async event => {
+    event.preventDefault();
+    if (!/^\d{6}$/.test(code)) { setError('请输入验证器中的 6 位数字'); return; }
+    setLoading(true); setError('');
+    try { await verifyMfaCode(code); onSuccess(); }
+    catch { setError('验证码不正确或已过期，请重新输入'); setCode(''); }
+    finally { setLoading(false); }
+  };
+  return <div className="min-h-[100dvh] grid place-items-center p-5 bg-gradient-to-br from-[#f0f8f2] via-[#fffdfa] to-[#fbe9ed]">
+    <form onSubmit={submit} className="relative bg-white rounded-3xl border border-brand-100 shadow-xl w-full max-w-sm p-7 text-center">
+      <span className="w-14 h-14 mx-auto rounded-2xl bg-[#edf6ef] text-[#568166] grid place-items-center"><ShieldCheck className="w-7 h-7" /></span>
+      <h2 className="text-2xl font-semibold font-heading text-warm-800 mt-4">双重验证</h2>
+      <p className="text-sm text-warm-800/45 mt-2">请输入验证器 App 中显示的 6 位动态码</p>
+      <input autoFocus inputMode="numeric" maxLength={6} value={code} onChange={e => { setCode(e.target.value.replace(/\D/g, '')); setError(''); }} className="w-full mt-6 px-4 py-3 rounded-xl border border-brand-200 text-center text-xl tracking-[.45em] focus:outline-none focus:ring-2 focus:ring-brand-300" />
+      {error && <p className="text-sm text-red-500 mt-3">{error}</p>}
+      <button disabled={loading} className="w-full mt-4 py-3 rounded-xl bg-[#cf7188] text-white font-semibold disabled:opacity-40">{loading ? '正在验证…' : '验证并进入'}</button>
+      <button type="button" onClick={onCancel} className="mt-3 text-xs text-warm-800/40 hover:text-red-500">退出登录</button>
+    </form>
+  </div>;
+}
+
 function PublicApp() {
   const [session, setSession] = useState(undefined);
+  const [mfaRequired, setMfaRequired] = useState(false);
+
+  const inspectSession = async value => {
+    if (!value) { setSession(null); setMfaRequired(false); return; }
+    try {
+      const assurance = await getMfaState();
+      setMfaRequired(assurance.currentLevel === 'aal1' && assurance.nextLevel === 'aal2');
+    } catch { setMfaRequired(false); }
+    setSession(value);
+  };
 
   useEffect(() => {
     let active = true;
-    getAuthSession().then(value => { if (active) setSession(value); }).catch(() => { if (active) setSession(null); });
-    const subscription = onAuthStateChange(value => setSession(value));
+    getAuthSession().then(value => { if (active) inspectSession(value); }).catch(() => { if (active) setSession(null); });
+    const subscription = onAuthStateChange(value => { if (active) inspectSession(value); });
     return () => {
       active = false;
       subscription?.unsubscribe?.();
@@ -185,10 +224,12 @@ function PublicApp() {
   if (!session) {
     return (
       <Routes>
-        <Route path="*" element={<LoginPage onLogin={setSession} />} />
+        <Route path="*" element={<LoginPage onLogin={inspectSession} />} />
       </Routes>
     );
   }
+
+  if (mfaRequired) return <MfaChallenge onSuccess={async () => inspectSession(await getAuthSession())} onCancel={async () => { await signOut(); setSession(null); }} />;
 
   return (
     <StoreProvider>
@@ -198,6 +239,8 @@ function PublicApp() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/orders" element={<Orders />} />
         <Route path="/trash" element={<TrashPage />} />
+        <Route path="/conflicts" element={<Conflicts />} />
+        <Route path="/activity" element={<ActivityPage />} />
         <Route path="/customers" element={<Customers />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/statistics" element={<Statistics />} />

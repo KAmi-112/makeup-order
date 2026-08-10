@@ -2,11 +2,12 @@
 import { useStore, generateId, themePresets } from '../store.jsx';
 import { useEffect } from 'react';
 import { updateAccountEmail, updateAccountPassword } from '../db.js';
+import MfaSettings from '../components/MfaSettings.jsx';
 import {
   Plus, Edit3, Trash2, X, Check, Download, Upload,
   Sparkles, AlertCircle, ShieldCheck, Copy, MessageCircle,
   FileText, ShoppingBag, Palette, ExternalLink, Lock, Printer, Clock, Calendar, Megaphone,
-  ArrowUp, ArrowDown, Save, Quote
+  ArrowUp, ArrowDown, Save, Quote, CalendarOff, MessagesSquare
 } from 'lucide-react';
 
 /* ---- Theme Picker ---- */
@@ -68,17 +69,33 @@ export default function Settings() {
   const [newAnnouncement, setNewAnnouncement] = useState('');
   const [quoteDrafts, setQuoteDrafts] = useState(state.topQuotes || []);
   const [newTopQuote, setNewTopQuote] = useState('');
+  const [newBlockedDate, setNewBlockedDate] = useState('');
+  const [bookingDraft, setBookingDraft] = useState(state.bookingRules);
+  const [reminderDrafts, setReminderDrafts] = useState(state.reminderTemplates || []);
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [accountSaving, setAccountSaving] = useState(false);
 
   useEffect(() => setQuoteDrafts(state.topQuotes || []), [state.topQuotes]);
+  useEffect(() => setBookingDraft(state.bookingRules), [state.bookingRules]);
+  useEffect(() => setReminderDrafts(state.reminderTemplates || []), [state.reminderTemplates]);
 
   const saveTopQuotes = () => {
     const cleaned = quoteDrafts.map(q => q.trim()).filter(Boolean).slice(0, 12);
     if (cleaned.length === 0) { showMsg('请至少保留一句顶部语句', 'error'); return; }
     dispatch({ type: 'UPDATE_TOP_QUOTES', payload: cleaned });
     showMsg('顶部轮播语句已保存');
+  };
+
+  const saveBookingRules = () => {
+    dispatch({ type: 'UPDATE_BOOKING_RULES', payload: bookingDraft });
+    showMsg('接单日期与时间规则已保存');
+  };
+
+  const saveReminderTemplates = () => {
+    const cleaned = reminderDrafts.filter(t => t.name.trim() && t.content.trim());
+    dispatch({ type: 'UPDATE_REMINDER_TEMPLATES', payload: cleaned });
+    showMsg('客户提醒模板已保存');
   };
 
   const changeEmail = async () => {
@@ -411,6 +428,54 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* ========== 接单日期与时间 ========== */}
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="font-semibold text-warm-800 flex items-center gap-2"><CalendarOff className="w-4 h-4 text-brand-500" />接单日期与时间</h3>
+            <p className="text-xs text-warm-800/40 mt-1">休息日会在客户预约页直接禁用；订单之间可预留整理时间。</p>
+          </div>
+          <button onClick={saveBookingRules} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#5d8b69] text-white text-sm font-semibold"><Save className="w-4 h-4" />保存规则</button>
+        </div>
+        <div className="grid md:grid-cols-3 gap-3 mb-4">
+          <label className="text-xs text-warm-800/55">开始接单时间
+            <input type="time" value={bookingDraft?.workingHours?.start || '07:00'} onChange={e => setBookingDraft(r => ({ ...r, workingHours: { ...r.workingHours, start: e.target.value } }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-brand-200 bg-white" />
+          </label>
+          <label className="text-xs text-warm-800/55">结束接单时间
+            <input type="time" value={bookingDraft?.workingHours?.end || '18:00'} onChange={e => setBookingDraft(r => ({ ...r, workingHours: { ...r.workingHours, end: e.target.value } }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-brand-200 bg-white" />
+          </label>
+          <label className="text-xs text-warm-800/55">订单间隔（分钟）
+            <input type="number" min="0" max="180" step="15" value={bookingDraft?.bufferMinutes ?? 30} onChange={e => setBookingDraft(r => ({ ...r, bufferMinutes: Number(e.target.value) }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-brand-200 bg-white" />
+          </label>
+        </div>
+        <div className="flex gap-2 mb-3">
+          <input type="date" value={newBlockedDate} onChange={e => setNewBlockedDate(e.target.value)} className="flex-1 px-3 py-2.5 rounded-xl border border-brand-200" />
+          <button onClick={() => { if (!newBlockedDate) return; setBookingDraft(r => ({ ...r, blockedDates: [...new Set([...(r?.blockedDates || []), newBlockedDate])].sort() })); setNewBlockedDate(''); }} className="px-4 py-2.5 rounded-xl bg-brand-50 text-brand-600 text-sm font-semibold">添加休息日</button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(bookingDraft?.blockedDates || []).map(date => <span key={date} className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#fff1f4] text-[#a95469] text-sm">{date}<button onClick={() => setBookingDraft(r => ({ ...r, blockedDates: r.blockedDates.filter(d => d !== date) }))}>×</button></span>)}
+          {(bookingDraft?.blockedDates || []).length === 0 && <span className="text-sm text-warm-800/35">还没有设置休息日</span>}
+        </div>
+      </div>
+
+      {/* ========== 客户提醒模板 ========== */}
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="font-semibold text-warm-800 flex items-center gap-2"><MessagesSquare className="w-4 h-4 text-[#5d8b69]" />客户提醒模板</h3>
+            <p className="text-xs text-warm-800/40 mt-1">订单中一键生成微信消息。可使用：{'{date} {time} {makeupType} {location} {price} {deposit} {balance} {customerName}'}</p>
+          </div>
+          <button onClick={saveReminderTemplates} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#cf7188] text-white text-sm font-semibold"><Save className="w-4 h-4" />保存模板</button>
+        </div>
+        <div className="space-y-3">
+          {reminderDrafts.map((template, index) => <div key={template.id || index} className="rounded-xl border border-brand-100 bg-[#fffdfb] p-3">
+            <div className="flex gap-2 mb-2"><input value={template.name} onChange={e => setReminderDrafts(items => items.map((t, i) => i === index ? { ...t, name: e.target.value } : t))} className="flex-1 px-3 py-2 rounded-lg border border-brand-100 text-sm font-semibold" /><button onClick={() => setReminderDrafts(items => items.filter((_, i) => i !== index))} className="p-2 text-red-400"><Trash2 className="w-4 h-4" /></button></div>
+            <textarea rows="2" value={template.content} onChange={e => setReminderDrafts(items => items.map((t, i) => i === index ? { ...t, content: e.target.value } : t))} className="w-full px-3 py-2 rounded-lg border border-brand-100 text-sm resize-y" />
+          </div>)}
+          <button onClick={() => setReminderDrafts(items => [...items, { id: generateId(), name: '新提醒', content: '你好 {customerName}，提醒你 {date} {time} 的 {makeupType} 预约。' }])} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-50 text-brand-600 text-sm"><Plus className="w-4 h-4" />添加模板</button>
+        </div>
+      </div>
+
       {/* ========== 特殊日期管理 ========== */}
       {state.priceRules?.special_dates?.enabled && (
         <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5 overflow-hidden">
@@ -661,6 +726,7 @@ export default function Settings() {
             </div>
           </div>
         </div>
+        <MfaSettings onMessage={showMsg} />
       </div>
 
       {/* ========== 数据管理 ========== */}

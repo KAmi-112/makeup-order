@@ -27,6 +27,18 @@ const defaultTopQuotes = [
   '好的服务，从认真对待每一次预约开始',
 ];
 
+const defaultBookingRules = {
+  blockedDates: [],
+  workingHours: { start: '07:00', end: '18:00' },
+  bufferMinutes: 30,
+};
+
+const defaultReminderTemplates = [
+  { id: 'confirm', name: '预约确认', content: '你好呀，已为你确认 {date} {time} 的 {makeupType}，地点：{location}。请提前安排好出行时间。' },
+  { id: 'before', name: '出发提醒', content: '温馨提醒：明天 {time} 是你的 {makeupType} 预约，请带好需要搭配的服装、假发或饰品。' },
+  { id: 'balance', name: '尾款提醒', content: '本次妆造总价 ¥{price}，已付定金 ¥{deposit}，待付尾款 ¥{balance}，感谢理解。' },
+];
+
 function getInitialState() {
   return {
     orders: [],
@@ -45,6 +57,8 @@ function getInitialState() {
     /* 滚动公告 */
     announcements: [],
     topQuotes: defaultTopQuotes,
+    bookingRules: defaultBookingRules,
+    reminderTemplates: defaultReminderTemplates,
     loading: true,
     cloudReady: db.cloudReady,
   };
@@ -65,6 +79,8 @@ function reducer(state, action) {
         priceRules: action.payload.priceRules || state.priceRules,
         announcements: action.payload.announcements || state.announcements,
         topQuotes: action.payload.topQuotes?.length ? action.payload.topQuotes : state.topQuotes,
+        bookingRules: action.payload.bookingRules || state.bookingRules,
+        reminderTemplates: action.payload.reminderTemplates?.length ? action.payload.reminderTemplates : state.reminderTemplates,
         loading: false,
       };
     case 'SET_LOADING':
@@ -107,6 +123,10 @@ function reducer(state, action) {
       return { ...state, announcements: action.payload };
     case 'UPDATE_TOP_QUOTES':
       return { ...state, topQuotes: action.payload };
+    case 'UPDATE_BOOKING_RULES':
+      return { ...state, bookingRules: action.payload };
+    case 'UPDATE_REMINDER_TEMPLATES':
+      return { ...state, reminderTemplates: action.payload };
     case 'SET_THEME':
       return { ...state, theme: action.payload };
 
@@ -185,6 +205,8 @@ export function StoreProvider({ children }) {
         case 'UPDATE_PRICE_RULES':
         case 'UPDATE_ANNOUNCEMENTS':
         case 'UPDATE_TOP_QUOTES':
+        case 'UPDATE_BOOKING_RULES':
+        case 'UPDATE_REMINDER_TEMPLATES':
         case 'SET_THEME':
         case 'IMPORT_DATA': {
           setTimeout(() => saveSettingsToCloud(), 50);
@@ -208,6 +230,8 @@ export function StoreProvider({ children }) {
         priceRules: s.priceRules,
         announcements: s.announcements,
         topQuotes: s.topQuotes,
+        bookingRules: s.bookingRules,
+        reminderTemplates: s.reminderTemplates,
       });
     } catch (e) {
       console.error('Failed to save settings:', e);
