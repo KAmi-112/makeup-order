@@ -32,6 +32,7 @@ const navItems = [
 function DesktopSidebar() {
   return (
     <aside className="hidden lg:flex flex-col w-[260px] bg-gradient-to-b from-[#f4fbf5] via-[#fffafb] to-[#fffdf9] text-[#355844] shrink-0 border-r border-[#e7eee8] relative overflow-hidden shadow-[10px_0_35px_rgba(86,128,99,.05)]">
+      <img src={`${import.meta.env.BASE_URL}lotus-watercolor.webp`} alt="" className="absolute inset-x-0 bottom-0 w-full h-52 object-cover object-left-bottom opacity-[.16] pointer-events-none mix-blend-multiply" />
       <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-[#f9dbe2]/45" />
       <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full border border-[#e9b8c4]/40" />
       <div className="px-6 py-7 border-b border-[#e3eee5] relative">
@@ -113,21 +114,17 @@ function CloudStatus() {
   );
 }
 
-const topQuotes = [
-  '小荷才露尖尖角，今日也要从容发光',
-  '清晰的档期，让每一次创作都有余裕',
-  '专注手上的妆面，其余交给小荷',
-  '好的服务，从认真对待每一次预约开始',
-]
-
 /* ======== Layout ======== */
 function Layout({ children, onLogout }) {
+  const { state } = useStore();
   const location = useLocation();
   const [qIdx, setQIdx] = useState(0);
+  const topQuotes = state.topQuotes?.length ? state.topQuotes : ['小荷才露尖尖角，今日也要从容发光'];
   useEffect(() => {
     const t = setInterval(() => setQIdx(i => (i + 1) % topQuotes.length), 5000);
     return () => clearInterval(t);
-  }, []);
+  }, [topQuotes.length]);
+  useEffect(() => { if (qIdx >= topQuotes.length) setQIdx(0); }, [qIdx, topQuotes.length]);
 
   return (
     <div className="app-shell flex h-[100dvh] overflow-hidden">

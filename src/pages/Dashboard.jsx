@@ -94,6 +94,7 @@ export default function Dashboard() {
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
       {/* Welcome */}
       <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-[#edf8ef] via-[#fffaf9] to-[#f8dfe5] text-[#355844] px-6 py-7 md:px-9 md:py-8 border border-white shadow-[0_22px_60px_rgba(91,132,102,.11)] flex items-center justify-between flex-wrap gap-5">
+        <img src={`${import.meta.env.BASE_URL}lotus-watercolor.webp`} alt="" className="absolute inset-0 w-full h-full object-cover object-center opacity-[.15] mix-blend-multiply pointer-events-none" />
         <div className="absolute -right-24 -top-24 w-72 h-72 rounded-full border border-[#d98ba0]/25 bg-white/25" />
         <div className="absolute right-8 -bottom-28 w-64 h-64 rounded-full bg-[#e59bae]/25 blur-2xl" />
         <div className="relative">

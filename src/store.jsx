@@ -20,6 +20,13 @@ const defaultExtraServices = [
   { id: 'e5', name: '全新粉扑（用完包装好带走）', price: 3 },
 ];
 
+const defaultTopQuotes = [
+  '小荷才露尖尖角，今日也要从容发光',
+  '清晰的档期，让每一次创作都有余裕',
+  '专注手上的妆面，其余交给小荷',
+  '好的服务，从认真对待每一次预约开始',
+];
+
 function getInitialState() {
   return {
     orders: [],
@@ -37,6 +44,7 @@ function getInitialState() {
     },
     /* 滚动公告 */
     announcements: [],
+    topQuotes: defaultTopQuotes,
     loading: true,
     cloudReady: db.cloudReady,
   };
@@ -56,6 +64,7 @@ function reducer(state, action) {
         menuPass: action.payload.menuPass || '小荷',
         priceRules: action.payload.priceRules || state.priceRules,
         announcements: action.payload.announcements || state.announcements,
+        topQuotes: action.payload.topQuotes?.length ? action.payload.topQuotes : state.topQuotes,
         loading: false,
       };
     case 'SET_LOADING':
@@ -96,6 +105,8 @@ function reducer(state, action) {
       return { ...state, priceRules: action.payload };
     case 'UPDATE_ANNOUNCEMENTS':
       return { ...state, announcements: action.payload };
+    case 'UPDATE_TOP_QUOTES':
+      return { ...state, topQuotes: action.payload };
     case 'SET_THEME':
       return { ...state, theme: action.payload };
 
@@ -173,6 +184,7 @@ export function StoreProvider({ children }) {
         case 'UPDATE_NOTICE':
         case 'UPDATE_PRICE_RULES':
         case 'UPDATE_ANNOUNCEMENTS':
+        case 'UPDATE_TOP_QUOTES':
         case 'SET_THEME':
         case 'IMPORT_DATA': {
           setTimeout(() => saveSettingsToCloud(), 50);
@@ -195,6 +207,7 @@ export function StoreProvider({ children }) {
         theme: s.theme,
         priceRules: s.priceRules,
         announcements: s.announcements,
+        topQuotes: s.topQuotes,
       });
     } catch (e) {
       console.error('Failed to save settings:', e);

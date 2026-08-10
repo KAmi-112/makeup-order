@@ -1,10 +1,12 @@
 ﻿import { useState } from 'react';
 import { useStore, generateId, themePresets } from '../store.jsx';
+import { useEffect } from 'react';
 import { updateAccountEmail, updateAccountPassword } from '../db.js';
 import {
   Plus, Edit3, Trash2, X, Check, Download, Upload,
   Sparkles, AlertCircle, ShieldCheck, Copy, MessageCircle,
-  FileText, ShoppingBag, Palette, ExternalLink, Lock, Printer, Clock, Calendar, Megaphone
+  FileText, ShoppingBag, Palette, ExternalLink, Lock, Printer, Clock, Calendar, Megaphone,
+  ArrowUp, ArrowDown, Save, Quote
 } from 'lucide-react';
 
 /* ---- Theme Picker ---- */
@@ -64,9 +66,20 @@ export default function Settings() {
   const [typeForm, setTypeForm] = useState({ name: '', defaultPrice: 168, defaultDuration: 1, emoji: '💄', desc: '' });
   const [newDate, setNewDate] = useState('');
   const [newAnnouncement, setNewAnnouncement] = useState('');
+  const [quoteDrafts, setQuoteDrafts] = useState(state.topQuotes || []);
+  const [newTopQuote, setNewTopQuote] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [accountSaving, setAccountSaving] = useState(false);
+
+  useEffect(() => setQuoteDrafts(state.topQuotes || []), [state.topQuotes]);
+
+  const saveTopQuotes = () => {
+    const cleaned = quoteDrafts.map(q => q.trim()).filter(Boolean).slice(0, 12);
+    if (cleaned.length === 0) { showMsg('请至少保留一句顶部语句', 'error'); return; }
+    dispatch({ type: 'UPDATE_TOP_QUOTES', payload: cleaned });
+    showMsg('顶部轮播语句已保存');
+  };
 
   const changeEmail = async () => {
     if (!newEmail.trim()) return;
@@ -448,6 +461,41 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      {/* ========== 管理端顶部轮播语句 ========== */}
+      <div className="relative overflow-hidden bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
+        <img src={`${import.meta.env.BASE_URL}lotus-watercolor.webp`} alt="" className="absolute right-0 bottom-0 w-72 h-full object-cover object-right-bottom opacity-[.08] pointer-events-none" />
+        <div className="relative flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="font-semibold text-warm-800 flex items-center gap-2">
+              <Quote className="w-4 h-4 text-brand-500" /> 工作台顶部轮播语句
+            </h3>
+            <p className="text-xs text-warm-800/40 mt-1">登录后，电脑端页面最上方每 5 秒轮播一句；可直接修改并调整顺序。</p>
+          </div>
+          <button onClick={saveTopQuotes} className="relative inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#df8298] to-[#70a683] text-white text-sm font-semibold shadow-sm">
+            <Save className="w-4 h-4" /> 保存语句
+          </button>
+        </div>
+        <div className="relative space-y-2">
+          {quoteDrafts.map((quote, index) => (
+            <div key={index} className="flex items-center gap-2 rounded-xl bg-[#fff9fa]/90 border border-brand-100 p-2">
+              <span className="w-7 h-7 rounded-lg bg-[#edf7ef] text-[#5d9470] grid place-items-center text-xs font-semibold shrink-0">{index + 1}</span>
+              <input value={quote} maxLength={60} onChange={e => setQuoteDrafts(items => items.map((item, i) => i === index ? e.target.value : item))}
+                className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-white border border-brand-100 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300" />
+              <button aria-label="上移" disabled={index === 0} onClick={() => setQuoteDrafts(items => { const next=[...items]; [next[index-1],next[index]]=[next[index],next[index-1]]; return next; })} className="p-2 rounded-lg text-[#6b9878] hover:bg-[#edf7ef] disabled:opacity-25"><ArrowUp className="w-4 h-4" /></button>
+              <button aria-label="下移" disabled={index === quoteDrafts.length - 1} onClick={() => setQuoteDrafts(items => { const next=[...items]; [next[index],next[index+1]]=[next[index+1],next[index]]; return next; })} className="p-2 rounded-lg text-[#6b9878] hover:bg-[#edf7ef] disabled:opacity-25"><ArrowDown className="w-4 h-4" /></button>
+              <button onClick={() => setQuoteDrafts(items => items.filter((_, i) => i !== index))} className="p-2 rounded-lg text-red-400 hover:bg-red-50"><Trash2 className="w-4 h-4" /></button>
+            </div>
+          ))}
+          <div className="flex gap-2 pt-2">
+            <input value={newTopQuote} maxLength={60} onChange={e => setNewTopQuote(e.target.value)} placeholder="添加一句新的顶部语句（最多 60 字）"
+              onKeyDown={e => { if (e.key === 'Enter' && newTopQuote.trim()) { setQuoteDrafts(items => [...items, newTopQuote.trim()].slice(0, 12)); setNewTopQuote(''); } }}
+              className="flex-1 px-3 py-2.5 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300" />
+            <button onClick={() => { if (!newTopQuote.trim()) return; setQuoteDrafts(items => [...items, newTopQuote.trim()].slice(0, 12)); setNewTopQuote(''); }}
+              className="px-4 py-2.5 bg-brand-500 text-white text-sm rounded-xl font-semibold">添加</button>
+          </div>
+        </div>
+      </div>
 
       {/* ========== 滚动公告 ========== */}
       <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5 overflow-hidden">

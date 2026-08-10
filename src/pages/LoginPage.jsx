@@ -31,6 +31,7 @@ export default function LoginPage({ onLogin }) {
   return (
     <main className="min-h-[100dvh] grid lg:grid-cols-[1.08fr_.92fr] bg-[#fffdf9]">
       <section className="hidden lg:flex relative overflow-hidden p-16 flex-col justify-between text-[#355844] bg-gradient-to-br from-[#edf8ef] via-[#fffafb] to-[#f9dfe5]">
+        <img src={`${import.meta.env.BASE_URL}lotus-watercolor.webp`} alt="淡彩荷花" className="absolute inset-0 w-full h-full object-cover opacity-[.38] mix-blend-multiply" />
         <div className="absolute inset-0 opacity-90 bg-[radial-gradient(circle_at_14%_16%,rgba(255,255,255,.95)_0,transparent_30%),radial-gradient(circle_at_87%_78%,rgba(236,159,178,.32)_0,transparent_30%)]" />
         <div className="absolute w-[520px] h-[520px] -right-48 -top-48 rounded-full border border-[#dfa0af]/30 bg-white/15" />
         <div className="absolute w-[360px] h-[360px] -right-28 -top-28 rounded-full border border-[#75a987]/25" />
