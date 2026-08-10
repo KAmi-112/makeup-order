@@ -4,3 +4,5 @@ dist
 .env.bak
 .env.example.bak
 *.log
+.vite-check.*
+.vite-check.*
