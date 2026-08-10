@@ -1,42 +1,54 @@
-import { useMemo } from 'react';
-import { useStore, paymentLabels } from '../store.jsx';
+﻿import { useMemo } from 'react';
+import { useStore, paymentLabels, statusLabels, statusColors } from '../store.jsx';
 import { useNavigate } from 'react-router-dom';
-import {
-  TrendingUp, Users, ClipboardList, DollarSign,
-  CalendarDays, ArrowRight, CheckCircle2, Clock, AlertCircle,
-  Sparkles
-} from 'lucide-react';
+import { DollarSign, ClipboardList, CalendarDays, Users, Clock, TrendingUp, Sparkles, ArrowRight, Sun, CloudSun, Cloud, CloudRain, Snowflake, CloudLightning, PartyPopper } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { fetchWeather } from '../utils/weather.js';
+import { getHoliday, upcomingHolidays } from '../utils/holidays.js';
 
-function StatCard({ icon: Icon, title, value, sub, color, delay = 0 }) {
+/* ---- 统计卡片 ---- */
+function StatCard({ icon: Icon, title, value, sub, gradient, delay = 0 }) {
   const gradients = {
-    rose: 'from-rose-400 to-rose-600',
-    blue: 'from-blue-400 to-blue-600',
-    amber: 'from-amber-400 to-amber-600',
-    emerald: 'from-emerald-400 to-emerald-600',
-    violet: 'from-violet-400 to-violet-600',
+    peach:  'from-[#d69ba6] to-[#b96f7e]',
+    orange: 'from-[#d4a85f] to-[#b77b32]',
+    blue:   'from-[#6d8d8a] to-[#476d69]',
+    rose:   'from-[#67a17a] to-[#356f4c]',
   };
   return (
-    <div
-      className="bg-white rounded-2xl p-4 sm:p-5 border border-rose-100 shadow-sm hover:shadow-md transition-all duration-300 animate-scale-in"
-      style={{ animationDelay: `${delay}ms` }}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[11px] sm:text-xs text-warm-800/50 font-medium mb-1 truncate">{title}</p>
-          <p className="text-xl sm:text-2xl font-bold text-warm-800 truncate">{value}</p>
-          {sub && <p className="text-[11px] sm:text-xs text-warm-800/40 mt-1 truncate">{sub}</p>}
+    <div className="group panel-luxe rounded-[22px] p-5 transition-all duration-300 cursor-default stagger-item hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(35,68,48,.12)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-warm-muted font-medium mb-2 tracking-wide uppercase">{title}</p>
+          <p className="text-3xl font-extrabold text-warm-800 tracking-tight font-heading">{value}</p>
+          {sub && <p className="text-xs text-warm-muted mt-1.5 flex items-center gap-1">
+            <TrendingUp className="w-3 h-3 text-emerald-500" /> {sub}
+          </p>}
         </div>
-        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br ${gradients[color] || gradients.rose} flex items-center justify-center shadow-lg shrink-0`}>
-          <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradients[gradient] || gradients.peach} flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform shrink-0`}>
+          <Icon className="w-6 h-6 text-white" strokeWidth={1.5} />
         </div>
       </div>
     </div>
   );
 }
 
+function WeatherIcon({ text = '' }) {
+  const props = { className: 'w-6 h-6', strokeWidth: 1.7 };
+  if (text.includes('雷')) return <CloudLightning {...props} />;
+  if (text.includes('雪')) return <Snowflake {...props} />;
+  if (text.includes('雨')) return <CloudRain {...props} />;
+  if (text.includes('阴') || text.includes('雾')) return <Cloud {...props} />;
+  if (text.includes('云')) return <CloudSun {...props} />;
+  return <Sun {...props} />;
+}
+
+/* ---- 主组件 ---- */
 export default function Dashboard() {
   const { state } = useStore();
   const navigate = useNavigate();
+  const [weather, setWeather] = useState(null);
+
+  useEffect(() => { fetchWeather().then(setWeather); }, []);
 
   const stats = useMemo(() => {
     const now = new Date();
@@ -52,16 +64,16 @@ export default function Dashboard() {
     const todayOrders = state.orders.filter(o => o.date === today);
 
     const monthIncome = monthOrders.reduce((sum, o) => {
+      if (o.status === 'cancelled' || o.status === 'rejected') return sum;
       if (o.paymentStatus === 'full') return sum + o.price;
       if (o.paymentStatus === 'deposit') return sum + (o.deposit || 0);
+      if (o.status === 'completed' || o.status === 'confirmed') return sum + o.price;
       return sum;
     }, 0);
 
     const pending = state.orders.filter(o => o.status === 'pending' || o.status === 'confirmed').length;
-
-    const customers = new Set(state.orders.map(o => o.customerPhone).filter(Boolean)).size;
-
-    return { monthOrders: monthOrders.length, monthIncome, todayOrders: todayOrders.length, pending, customers };
+    const customers = new Set(state.orders.map(o => o.customerName).filter(Boolean)).size;
+    return { monthIncome, todayOrders: todayOrders.length, pending, customers };
   }, [state.orders]);
 
   const recentOrders = useMemo(() => {
@@ -73,89 +85,100 @@ export default function Dashboard() {
   const upcomingOrders = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     return state.orders
-      .filter(o => o.date >= today && o.status !== 'cancelled')
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(0, 5);
+      .filter(o => o.date >= today && o.status !== 'cancelled' && o.status !== 'rejected')
+      .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))
+      .slice(0, 8);
   }, [state.orders]);
 
-  const statusIcons = {
-    pending: <Clock className="w-3.5 h-3.5" />,
-    confirmed: <CheckCircle2 className="w-3.5 h-3.5" />,
-    completed: <CheckCircle2 className="w-3.5 h-3.5" />,
-    cancelled: <AlertCircle className="w-3.5 h-3.5" />,
-  };
-
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
       {/* Welcome */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-warm-800">👋 欢迎回来</h2>
-          <p className="text-sm text-warm-800/50 mt-0.5">
+      <div className="relative overflow-hidden rounded-[28px] bg-[#203b2d] text-white px-6 py-7 md:px-9 md:py-8 shadow-[0_22px_60px_rgba(25,49,38,.18)] flex items-center justify-between flex-wrap gap-5">
+        <div className="absolute -right-24 -top-24 w-72 h-72 rounded-full border border-white/8" />
+        <div className="absolute right-8 -bottom-28 w-64 h-64 rounded-full bg-[#d49aa5]/10 blur-2xl" />
+        <div className="relative">
+          <p className="text-[11px] tracking-[.24em] text-[#d9a6ae] mb-2">小荷·今日工作台</p>
+          <h2 className="text-3xl md:text-4xl font-semibold font-heading tracking-wide">下午好，小荷</h2>
+          <p className="text-sm text-white/55 mt-2">
             {new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
           </p>
         </div>
-        <button
-          onClick={() => navigate('/orders?new=1')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-rose-500 to-rose-600 text-white text-sm font-medium rounded-xl shadow-lg shadow-rose-200 hover:shadow-xl hover:shadow-rose-300 transition-all active:scale-95"
-        >
-          <Sparkles className="w-4 h-4" /> 新建订单
+        <button onClick={() => navigate('/orders?new=1')}
+          className="relative flex items-center gap-2 px-5 py-3 bg-[#d9a6ae] text-[#203b2d] text-sm font-bold rounded-xl shadow-lg hover:bg-[#e4b8bf] hover:-translate-y-0.5 transition-all active:scale-95">
+          <Sparkles className="w-4 h-4" /> 新建预约
         </button>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={DollarSign} title="本月收入" value={`¥${stats.monthIncome.toLocaleString()}`} sub={`${stats.monthOrders} 单`} color="emerald" delay={0} />
-        <StatCard icon={ClipboardList} title="待处理" value={stats.pending} sub="待确认 / 已确认" color="amber" delay={50} />
-        <StatCard icon={CalendarDays} title="今日订单" value={stats.todayOrders} sub="今天" color="blue" delay={100} />
-        <StatCard icon={Users} title="客户总数" value={stats.customers} sub="去重客户" color="rose" delay={150} />
+      {/* Weather + Holiday row */}
+      {(weather || upcomingHolidays().length > 0) && (
+        <div className="flex items-stretch gap-3 flex-wrap">
+          {weather && (
+            <div className="flex items-center gap-3 bg-white rounded-2xl border border-brand-100 shadow-sm px-5 py-3 flex-1 min-w-[200px]">
+              <span className="w-11 h-11 rounded-2xl bg-brand-50 text-brand-600 grid place-items-center shrink-0">
+                <WeatherIcon text={weather.current.text} />
+              </span>
+              <div>
+                <p className="text-lg font-extrabold text-warm-800">{weather.current.temp}°C <span className="text-sm font-normal text-warm-muted">{weather.current.text}</span></p>
+                <p className="text-xs text-warm-muted">
+                  {weather.forecast.map(f => `${f.date} ${f.low}~${f.high}° ${f.text}`).join('  ·  ')}
+                </p>
+              </div>
+            </div>
+          )}
+          {upcomingHolidays().map(h => (
+            <div key={h.date} className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+              <PartyPopper className="w-5 h-5 text-amber-500" />
+              <div>
+                <p className="text-sm font-bold text-amber-700">{h.name}</p>
+                <p className="text-xs text-amber-500">{h.date.slice(5)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard icon={DollarSign} title="本月收入" value={`¥${stats.monthIncome.toLocaleString()}`} gradient="peach" delay={0} />
+        <StatCard icon={ClipboardList} title="待处理订单" value={stats.pending} sub="需确认/处理" gradient="orange" delay={50} />
+        <StatCard icon={CalendarDays} title="今日预约" value={stats.todayOrders} sub="今日排期" gradient="blue" delay={100} />
+        <StatCard icon={Users} title="客户数量" value={stats.customers} sub="去重统计" gradient="rose" delay={150} />
       </div>
 
       {/* Two columns */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Recent Orders */}
-        <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5">
+      <div className="grid lg:grid-cols-5 gap-6">
+        {/* Recent Orders — 占3份 */}
+        <div className="lg:col-span-3 panel-luxe rounded-[24px] p-5 md:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-warm-800 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-rose-400" /> 最近订单
+            <h3 className="font-bold text-warm-800 flex items-center gap-2 text-lg">
+              <Clock className="w-5 h-5 text-brand-500" strokeWidth={1.5} /> 最近订单
             </h3>
-            <button
-              onClick={() => navigate('/orders')}
-              className="text-xs text-rose-500 hover:text-rose-600 flex items-center gap-1 transition-colors"
-            >
+            <button onClick={() => navigate('/orders')}
+              className="text-xs text-brand-500 hover:text-brand-600 flex items-center gap-1 font-medium transition-colors">
               全部 <ArrowRight className="w-3 h-3" />
             </button>
           </div>
           {recentOrders.length === 0 ? (
-            <div className="text-center py-10 text-warm-800/30">
-              <Sparkles className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">暂无订单，点击右上角新建</p>
+            <div className="text-center py-12 text-warm-muted">
+              <Sparkles className="w-10 h-10 mx-auto mb-2 opacity-20" />
+              <p className="text-sm">暂无订单</p>
             </div>
           ) : (
             <div className="space-y-2">
               {recentOrders.map(o => (
-                <div
-                  key={o.id}
-                  onClick={() => navigate('/orders')}
-                  className="flex items-center justify-between p-3 rounded-xl hover:bg-rose-50/50 cursor-pointer transition-colors group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-xs font-bold text-rose-600 shrink-0">
-                      {o.customerName?.charAt(0) || '?'}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-warm-800 truncate">{o.customerName}</p>
-                      <p className="text-xs text-warm-800/40">{o.makeupType} · {o.date}</p>
-                    </div>
+                <div key={o.id} onClick={() => navigate('/orders')}
+                  className="flex items-center gap-4 p-3 rounded-2xl hover:bg-brand-50 cursor-pointer transition-all group hover:scale-[1.01]">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-100 to-brand-200 flex items-center justify-center text-sm font-bold text-brand-600 shrink-0">
+                    {o.customerName?.charAt(0) || '?'}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-warm-800 truncate">{o.customerName}</p>
+                    <p className="text-xs text-warm-muted">{o.makeupType} · {o.date}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-sm font-semibold text-warm-800">¥{o.price}</span>
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                      o.paymentStatus === 'full' ? 'bg-emerald-50 text-emerald-600' :
-                      o.paymentStatus === 'deposit' ? 'bg-amber-50 text-amber-600' :
-                      'bg-red-50 text-red-500'
-                    }`}>
-                      {paymentLabels[o.paymentStatus]}
+                    <span className="text-sm font-bold text-warm-800">¥{o.price}</span>
+                    <span className={`text-xs px-2.5 py-1.5 rounded-xl font-medium whitespace-nowrap ${statusColors[o.status]}`}>
+                      {statusLabels[o.status]}
                     </span>
                   </div>
                 </div>
@@ -164,48 +187,65 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Upcoming */}
-        <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5">
+        {/* Upcoming — 占2份，Timeline风格 */}
+        <div className="lg:col-span-2 panel-luxe rounded-[24px] p-5 md:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-warm-800 flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-rose-400" /> 即将到来
+            <h3 className="font-bold text-warm-800 flex items-center gap-2 text-lg">
+              <CalendarDays className="w-5 h-5 text-brand-500" strokeWidth={1.5} /> 即将到来
             </h3>
-            <button
-              onClick={() => navigate('/calendar')}
-              className="text-xs text-rose-500 hover:text-rose-600 flex items-center gap-1 transition-colors"
-            >
+            <button onClick={() => navigate('/calendar')}
+              className="text-xs text-brand-500 hover:text-brand-600 flex items-center gap-1 font-medium transition-colors">
               日历 <ArrowRight className="w-3 h-3" />
             </button>
           </div>
           {upcomingOrders.length === 0 ? (
-            <div className="text-center py-10 text-warm-800/30">
-              <CalendarDays className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">暂无即将到来的订单</p>
+            <div className="text-center py-12 text-warm-muted">
+              <CalendarDays className="w-10 h-10 mx-auto mb-2 opacity-20" />
+              <p className="text-sm">暂无预约</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {upcomingOrders.map(o => {
+            <div className="relative pl-6 space-y-0">
+              {/* Timeline line */}
+              <div className="absolute left-[9px] top-3 bottom-3 w-0.5 bg-brand-100 rounded" />
+              {upcomingOrders.map((o, i) => {
                 const d = new Date(o.date);
-                const dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+                const today = new Date().toISOString().slice(0,10);
+                const isToday = o.date === today;
+                // 智能提醒：距现在多久
+                const now = new Date();
+                let urgency = null;
+                if (isToday && o.time) {
+                  const [h, m] = (o.time || '00:00').split(':').map(Number);
+                  const orderTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m || 0);
+                  const diffMin = Math.floor((orderTime - now) / 60000);
+                  if (diffMin <= 60 && diffMin > 0) urgency = 'urgent';    // 1小时内
+                  else if (diffMin <= 120 && diffMin > 0) urgency = 'soon'; // 2小时内
+                  else if (diffMin > 0) urgency = 'today';
+                }
+                const urgencyColors = {
+                  urgent: 'ring-red-400 bg-red-50 border-red-300',
+                  soon: 'ring-amber-400 bg-amber-50 border-amber-300',
+                  today: '',
+                };
                 return (
-                  <div
-                    key={o.id}
-                    onClick={() => navigate('/orders')}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-rose-50/50 cursor-pointer transition-colors"
-                  >
-                    <div className="w-11 h-11 rounded-xl bg-rose-50 flex flex-col items-center justify-center shrink-0">
-                      <span className="text-xs text-rose-400">{d.getMonth() + 1}月</span>
-                      <span className="text-base font-bold text-rose-600 leading-tight">{d.getDate()}</span>
+                  <div key={o.id} onClick={() => navigate('/orders')}
+                    className={`relative pb-5 last:pb-0 cursor-pointer group ${urgency ? 'rounded-xl p-2 -mx-2 ' + (urgencyColors[urgency] || '') : ''}`}>
+                    {/* Dot */}
+                    <div className={`absolute -left-[21px] top-1 w-3 h-3 rounded-full border-2 transition-all ${
+                      isToday ? 'bg-brand-500 border-brand-300 ring-4 ring-brand-50' : 'bg-white border-brand-200 group-hover:border-brand-400'
+                    } ${urgency === 'urgent' ? '!bg-red-500 !border-red-300 animate-pulse' : ''} ${urgency === 'soon' ? '!bg-amber-500 !border-amber-300' : ''}`} />
+                    <div className={`pl-4 py-2 rounded-xl transition-all group-hover:bg-brand-50/50 ${isToday && !urgency ? 'bg-brand-50/30' : ''}`}>
+                      <p className="text-xs text-warm-muted flex items-center gap-2">
+                        {o.time} · {d.getMonth()+1}月{d.getDate()}日
+                        {isToday && <span className="text-xs px-1.5 py-0.5 rounded bg-brand-100 text-brand-600 font-medium">今天</span>}
+                        {urgency === 'urgent' && <span className="text-xs px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-medium animate-pulse">即将开始</span>}
+                        {urgency === 'soon' && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-600 font-medium">临近</span>}
+                      </p>
+                      <p className="text-sm font-semibold text-warm-800 mt-0.5">{o.customerName} <span className="font-normal text-warm-muted text-xs">{o.makeupType}</span></p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`text-[11px] px-2 py-1 rounded-lg font-medium ${statusColors[o.status]}`}>{statusLabels[o.status]}</span>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-warm-800 truncate">{o.customerName}</p>
-                      <p className="text-xs text-warm-800/40">{o.time} · {o.makeupType}</p>
-                    </div>
-                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
-                      o.status === 'confirmed' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'
-                    }`}>
-                      {o.status === 'confirmed' ? '已确认' : '待确认'}
-                    </span>
                   </div>
                 );
               })}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useState, useRef } from 'react';
+﻿import { createContext, useContext, useReducer, useEffect, useState, useRef } from 'react';
 import * as db from './db.js';
 
 const StoreContext = createContext(null);
@@ -26,7 +26,16 @@ function getInitialState() {
     makeupTypes: defaultMakeupTypes,
     extraServices: defaultExtraServices,
     notice: '',
-    theme: 'rose',
+    theme: 'lotus',
+    menuPass: '小荷',
+    /* 动态价格规则 */
+    priceRules: {
+      weekday_surcharge: { enabled: true, startTime: '18:00', endTime: '07:00', amount: 10 },
+      weekend_discount: { enabled: true, startTime: '18:00', endTime: '07:00', amount: -10 },
+      special_dates: { enabled: true, startTime: '18:00', endTime: '07:00', amount: -10, dates: [] },
+    },
+    /* 滚动公告 */
+    announcements: [],
     loading: true,
     cloudReady: db.cloudReady,
   };
@@ -42,6 +51,9 @@ function reducer(state, action) {
         extraServices: action.payload.extraServices.length > 0 ? action.payload.extraServices : state.extraServices,
         notice: action.payload.notice || state.notice,
         theme: action.payload.theme || state.theme,
+        menuPass: action.payload.menuPass || '小荷',
+        priceRules: action.payload.priceRules || state.priceRules,
+        announcements: action.payload.announcements || state.announcements,
         loading: false,
       };
     case 'SET_LOADING':
@@ -70,6 +82,10 @@ function reducer(state, action) {
 
     case 'UPDATE_NOTICE':
       return { ...state, notice: action.payload };
+    case 'UPDATE_PRICE_RULES':
+      return { ...state, priceRules: action.payload };
+    case 'UPDATE_ANNOUNCEMENTS':
+      return { ...state, announcements: action.payload };
     case 'SET_THEME':
       return { ...state, theme: action.payload };
 
@@ -81,6 +97,7 @@ function reducer(state, action) {
         extraServices: action.payload.extraServices ?? state.extraServices,
         notice: action.payload.notice ?? state.notice,
         theme: action.payload.theme ?? state.theme,
+        menuPass: action.payload.menuPass ?? state.menuPass,
       };
     default:
       return state;
@@ -110,16 +127,8 @@ export function StoreProvider({ children }) {
     load();
   }, []);
 
-  // 实时订阅（云端模式）
-  useEffect(() => {
-    if (!db.cloudReady) return;
-    const sub = db.subscribeToOrders((change) => {
-      if (change.type === 'ADD') dispatch({ type: 'ADD_ORDER', payload: change.order });
-      else if (change.type === 'UPDATE') dispatch({ type: 'UPDATE_ORDER', payload: change.order });
-      else if (change.type === 'DELETE') dispatch({ type: 'DELETE_ORDER', payload: change.id });
-    });
-    return () => sub.unsubscribe();
-  }, []);
+  // 实时订阅已关闭（避免页面自动刷新，需要时手动F5）
+  // useEffect(() => { ... });
 
   // 包装 dispatch：副作用操作（写数据库）
   const dispatchWithCloud = async (action) => {
@@ -145,9 +154,11 @@ export function StoreProvider({ children }) {
         case 'UPDATE_EXTRA_SERVICE':
         case 'DELETE_EXTRA_SERVICE':
         case 'UPDATE_NOTICE':
+        case 'UPDATE_PRICE_RULES':
+        case 'UPDATE_ANNOUNCEMENTS':
         case 'SET_THEME':
         case 'IMPORT_DATA': {
-          setTimeout(() => saveSettingsToCloud(), 10);
+          setTimeout(() => saveSettingsToCloud(), 50);
           break;
         }
       }
@@ -165,17 +176,16 @@ export function StoreProvider({ children }) {
         extraServices: s.extraServices,
         notice: s.notice,
         theme: s.theme,
+        priceRules: s.priceRules,
+        announcements: s.announcements,
       });
     } catch (e) {
       console.error('Failed to save settings:', e);
     }
   };
 
-  // 当设置变化时自动同步
-  useEffect(() => {
-    if (state.loading) return;
-    saveSettingsToCloud();
-  }, [state.makeupTypes, state.extraServices, state.notice, state.theme]);
+  // 自动同步已关闭（手动保存即可）
+
 
   return (
     <StoreContext.Provider value={{
@@ -202,11 +212,11 @@ export const sources = ['闲鱼', '微信', '小红书', '转介绍', '抖音', 
 export const statuses = ['pending', 'confirmed', 'completed', 'cancelled', 'rejected'];
 export const statusLabels = { pending: '待确认', confirmed: '已确认', completed: '已完成', cancelled: '已取消', rejected: '已拒绝' };
 export const statusColors = {
-  pending: 'bg-amber-100 text-amber-800',
-  confirmed: 'bg-blue-100 text-blue-800',
-  completed: 'bg-emerald-100 text-emerald-800',
+  pending: 'bg-amber-100 text-amber-700',
+  confirmed: 'bg-blue-100 text-blue-700',
+  completed: 'bg-emerald-100 text-emerald-700',
   cancelled: 'bg-gray-100 text-gray-500',
-  rejected: 'bg-red-100 text-red-700',
+  rejected: 'bg-red-100 text-red-600',
 };
 export const paymentStatuses = ['unpaid', 'deposit', 'full', 'refunded'];
 export const paymentLabels = { unpaid: '未付款', deposit: '已付定金', full: '已付全款', refunded: '已退款' };
@@ -219,6 +229,7 @@ export const paymentColors = {
 
 // 主题预设（保持不变）
 export const themePresets = [
+  { id: 'lotus', name: '小荷清莲', icon: '🪷', primary: '#437f59', primaryLight: '#f2f8f4', primaryDark: '#29533a', bg: '#f6f5ef', cardBg: '#fffefb', border: '#dce9df', text: '#24332b', textMuted: '#788078', radius: '18px' },
   { id: 'rose', name: '樱花粉', icon: '🌸', primary: '#f43f5e', primaryLight: '#fff1f2', primaryDark: '#e11d48', bg: '#fef9f0', cardBg: '#ffffff', border: '#ffe4e6', text: '#5c4b3a', textMuted: '#9a8a7a', radius: '16px' },
   { id: 'mauve', name: '莫兰迪紫', icon: '🪻', primary: '#8b5cf6', primaryLight: '#f5f3ff', primaryDark: '#7c3aed', bg: '#faf8f7', cardBg: '#ffffff', border: '#ede9fe', text: '#4a3f52', textMuted: '#8a7f92', radius: '14px' },
   { id: 'matcha', name: '抹茶绿', icon: '🍵', primary: '#059669', primaryLight: '#ecfdf5', primaryDark: '#047857', bg: '#f9faf7', cardBg: '#ffffff', border: '#d1fae5', text: '#3d4a3f', textMuted: '#7a8a7d', radius: '12px' },

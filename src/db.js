@@ -18,6 +18,30 @@ if (supabaseUrl && supabaseKey && supabaseUrl !== 'https://your-project.supabase
 function localGet() { try { return JSON.parse(localStorage.getItem(LOCAL_KEY)); } catch { return null; } }
 function localSet(data) { localStorage.setItem(LOCAL_KEY, JSON.stringify(data)); }
 
+export async function getAuthSession() {
+  if (!supabase) return null;
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return data.session;
+}
+
+export async function signIn(email, password) {
+  if (!supabase) throw new Error('云端服务未配置');
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data.session;
+}
+
+export async function signOut() {
+  if (supabase) await supabase.auth.signOut();
+}
+
+export function onAuthStateChange(callback) {
+  if (!supabase) return { unsubscribe: () => {} };
+  const { data } = supabase.auth.onAuthStateChange((_event, session) => callback(session));
+  return data.subscription;
+}
+
 export async function fetchOrders() {
   if (!cloudReady) return localGet()?.orders ?? [];
   const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
@@ -40,20 +64,25 @@ export async function updateOrder(order) {
 
 export async function deleteOrder(id) {
   if (!cloudReady) { const l=localGet()||{orders:[]}; l.orders=l.orders.filter(o=>o.id!==id); localSet(l); return; }
-  await supabase.from('orders').delete().eq('id', id);
+  const { error } = await supabase.from('orders').delete().eq('id', id);
+  if (error) throw error;
 }
 
 export async function fetchSettings() {
-  if (!cloudReady) { const l=localGet()||{}; return {makeupTypes:l.makeupTypes??[],extraServices:l.extraServices??[],notice:l.notice??'',theme:l.theme??'rose'}; }
+  if (!cloudReady) { const l=localGet()||{}; return {makeupTypes:l.makeupTypes??[],extraServices:l.extraServices??[],notice:l.notice??'',theme:l.theme??'lotus'}; }
   const { data, error } = await supabase.from('settings').select('*').single();
-  if (error) return {makeupTypes:[],extraServices:[],notice:'',theme:'rose'};
-  if(!data) return {makeupTypes:[],extraServices:[],notice:'',theme:'rose'};
-  return {makeupTypes:data.makeup_types??[],extraServices:data.extra_services??[],notice:data.notice??'',theme:data.theme??'rose'};
+  if (error) return {makeupTypes:[],extraServices:[],notice:'',theme:'lotus',priceRules:null,announcements:[]};
+  if(!data) return {makeupTypes:[],extraServices:[],notice:'',theme:'lotus',priceRules:null,announcements:[]};
+  const types = (data.makeup_types||[]).map(t => ({...t, defaultPrice: t.price ?? t.defaultPrice ?? 0, defaultDuration: t.duration ?? t.defaultDuration ?? 1}));
+  return {makeupTypes:types,extraServices:data.extra_services??[],notice:data.notice??'',theme:data.theme??'lotus',priceRules:data.price_rules??null,announcements:data.announcements??[]};
 }
 
 export async function saveSettings(s) {
   if (!cloudReady) { const l=localGet()||{}; Object.assign(l,s); localSet(l); return; }
-  await supabase.from('settings').upsert({id:1,makeup_types:s.makeupTypes,extra_services:s.extraServices,notice:s.notice,theme:s.theme,updated_at:new Date().toISOString()});
+  // 标准化字段：确保 price/duration 同步到 Supabase
+  const types = (s.makeupTypes || []).map(t => ({...t, price: t.defaultPrice ?? t.price ?? 0, duration: t.defaultDuration ?? t.duration ?? 1}));
+  const { error } = await supabase.from('settings').upsert({id:1,makeup_types:types,extra_services:s.extraServices,notice:s.notice,theme:s.theme,price_rules:s.priceRules,announcements:s.announcements,updated_at:new Date().toISOString()});
+  if (error) throw error;
 }
 
 export function subscribeToOrders(cb) {

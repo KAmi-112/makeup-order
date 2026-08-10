@@ -177,7 +177,7 @@ export default function Customers() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-warm-800">{o.date}</span>
                         <span className="text-xs text-warm-800/40">{o.time}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                        <span className={`text-xs px-2.5 py-1 rounded-xl font-medium whitespace-nowrap ${
                           o.status === 'completed' ? 'bg-emerald-50 text-emerald-600' :
                           o.status === 'confirmed' ? 'bg-blue-50 text-blue-600' :
                           'bg-amber-50 text-amber-600'

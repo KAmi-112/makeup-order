@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+﻿import { useState, useMemo } from 'react';
 import { useStore, statusLabels, statusColors, paymentLabels } from '../store.jsx';
 import { ChevronLeft, ChevronRight, Clock, Download, MapPin } from 'lucide-react';
 
@@ -51,8 +51,8 @@ export default function Calendar() {
     let ics = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//西瓜椰约妆//CN',
-      'X-WR-CALNAME:西瓜椰约妆 - 排期',
+      'PRODID:-//小荷约妆//CN',
+      'X-WR-CALNAME:小荷约妆 - 排期',
     ];
 
     monthOrders.forEach(o => {
@@ -79,7 +79,7 @@ export default function Calendar() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `西瓜椰排期_${year}年${month+1}月.ics`;
+    a.download = `小荷排期_${year}年${month+1}月.ics`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -91,7 +91,7 @@ export default function Calendar() {
       return d.getMonth() === month && d.getFullYear() === year;
     }).sort((a,b) => a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||''));
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>西瓜椰约妆 ${year}年${month+1}月</title>
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>小荷约妆 ${year}年${month+1}月</title>
 <style>body{font-family:'PingFang SC',sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#333}
 h1{text-align:center;font-size:22px;margin-bottom:4px}h1 span{color:#e11d48;font-size:14px}
 table{width:100%;border-collapse:collapse;margin-top:16px}
@@ -102,7 +102,7 @@ tr:nth-child(even){background:#fafafa}
 .c-green{color:#10b981}.c-blue{color:#3b82f6}.c-amber{color:#f59e0b}.c-red{color:#ef4444}.c-gray{color:#9ca3af}
 @media print{body{padding:0}@page{size:A4;margin:1cm}}
 </style></head><body>
-<h1>🍉 西瓜椰约妆 <span>${year}年${month+1}月排期</span></h1>
+<h1>🪷 小荷约妆 <span>${year}年${month+1}月排期</span></h1>
 <table><thead><tr><th>日期</th><th>时间</th><th>客户</th><th>妆造</th><th>状态</th><th>价格</th></tr></thead><tbody>
 ${monthOrders.map(o => {
   const sc = {pending:'c-amber',confirmed:'c-blue',completed:'c-green',cancelled:'c-gray',rejected:'c-red'};
@@ -110,7 +110,7 @@ ${monthOrders.map(o => {
   return `<tr><td>${o.date.slice(5)}</td><td>${o.time||''}·${o.duration}h</td><td>${o.customerName}</td><td>${o.makeupType}</td><td class="${sc[o.status]||''}">${sl[o.status]||o.status}</td><td>¥${o.price}</td></tr>`;
 }).join('')}
 </tbody></table>
-<p class="footer">西瓜椰约妆 · ${year}年${month+1}月 · 共${monthOrders.length}单 · 收入¥${monthIncome.toLocaleString()}</p>
+<p class="footer">小荷约妆 · ${year}年${month+1}月 · 共${monthOrders.length}单 · 收入¥${monthIncome.toLocaleString()}</p>
 </body></html>`;
 
     const win = window.open('', '_blank', 'width=900,height=700');
@@ -133,7 +133,7 @@ ${monthOrders.map(o => {
     });
 
     const sl = {pending:'待确认',confirmed:'已确认',completed:'已完成',cancelled:'已取消',rejected:'已拒绝'};
-    let text = `🍉 西瓜椰约妆 ${year}年${month+1}月排期\n${'─'.repeat(30)}\n`;
+    let text = `🪷 小荷约妆 ${year}年${month+1}月排期\n${'─'.repeat(30)}\n`;
     Object.keys(grouped).sort().forEach(date => {
       text += `\n📅 ${date}\n`;
       grouped[date].forEach(o => {
@@ -188,16 +188,16 @@ ${monthOrders.map(o => {
             <ChevronRight className="w-4 h-4 text-warm-800" />
           </button>
           <button onClick={exportICS}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-rose-200 text-rose-500 rounded-xl hover:bg-rose-50 transition-colors ml-2">
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-brand-200 text-brand-600 rounded-xl hover:bg-brand-50 transition-colors ml-2">
             <Download className="w-4 h-4" /> ics
           </button>
           <button onClick={printView}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-rose-200 text-rose-500 rounded-xl hover:bg-rose-50 transition-colors">
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-brand-200 text-brand-600 rounded-xl hover:bg-brand-50 transition-colors">
             🖨 打印
           </button>
           <button onClick={copyText}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-rose-200 text-rose-500 rounded-xl hover:bg-rose-50 transition-colors">
-            📋 复制文本
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white border border-brand-200 text-brand-600 rounded-xl hover:bg-brand-50 transition-colors">
+            卡片 复制文本
           </button>
         </div>
       </div>
@@ -205,13 +205,13 @@ ${monthOrders.map(o => {
       {/* Stats */}
       <div className="flex items-center gap-4 text-sm">
         <span className="text-warm-800/60">📊 当月 <strong className="text-warm-800">{state.orders.filter(o => {const d=new Date(o.date);return d.getMonth()===month&&d.getFullYear()===year;}).length}</strong> 单</span>
-        <span className="text-warm-800/60">💰 收入 <strong className="text-rose-600">¥{monthIncome.toLocaleString()}</strong></span>
+        <span className="text-warm-800/60">💰 收入 <strong className="text-brand-600">¥{monthIncome.toLocaleString()}</strong></span>
       </div>
 
       <div className="grid lg:grid-cols-[280px_1fr] gap-4">
         {/* Left: Mini calendar */}
-        <div className="bg-white rounded-2xl border border-rose-100 shadow-sm overflow-hidden">
-          <div className="grid grid-cols-7 border-b border-rose-50">
+        <div className="bg-white rounded-2xl border border-brand-100 shadow-sm">
+          <div className="grid grid-cols-7 border-b border-brand-50">
             {weekDays.map(d => (
               <div key={d} className="py-2 text-center text-[11px] font-semibold text-warm-800/40">{d}</div>
             ))}
@@ -220,10 +220,10 @@ ${monthOrders.map(o => {
             {calendarDays.map((cell, i) => (
               <div key={i}
                 onClick={() => cell && setSelectedDate(cell.dateStr)}
-                className={`aspect-square p-1 flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-rose-50/50 text-sm ${
+                className={`aspect-square p-1 flex flex-col items-center justify-center cursor-pointer transition-colors hover:bg-brand-50/50 text-sm ${
                   !cell ? 'bg-gray-50/50 text-gray-300' :
-                  cell.dateStr === selectedDate ? 'bg-rose-100 text-rose-700 font-bold' :
-                  cell.dateStr === today ? 'bg-rose-50 text-rose-600 font-semibold' :
+                  cell.dateStr === selectedDate ? 'bg-brand-100 text-rose-700 font-bold' :
+                  cell.dateStr === today ? 'bg-brand-50 text-brand-600 font-semibold' :
                   'text-warm-800'
                 }`}>
                 {cell && <>
@@ -236,8 +236,8 @@ ${monthOrders.map(o => {
         </div>
 
         {/* Right: Day timeline */}
-        <div className="bg-white rounded-2xl border border-rose-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-rose-100 flex items-center justify-between">
+        <div className="bg-white rounded-2xl border border-brand-100 shadow-sm">
+          <div className="px-4 py-3 border-b border-brand-100 flex items-center justify-between">
             <h3 className="font-semibold text-warm-800 flex items-center gap-2">
               <Clock className="w-4 h-4 text-rose-400" />
               {selectedDate}
@@ -250,7 +250,7 @@ ${monthOrders.map(o => {
             {/* Hour grid */}
             <div className="absolute inset-0">
               {hours.map(h => (
-                <div key={h} className="absolute left-0 right-0 border-t border-rose-50 flex"
+                <div key={h} className="absolute left-0 right-0 border-t border-brand-50 flex"
                   style={{ top: `${((h - 7) / 12) * 100}%`, height: `${(1 / 12) * 100}%` }}>
                   <span className="text-[10px] text-warm-800/30 w-12 shrink-0 text-right pr-2 pt-0.5">
                     {String(h).padStart(2, '0')}:00
@@ -272,7 +272,7 @@ ${monthOrders.map(o => {
                 };
                 return (
                   <div key={o.id}
-                    className={`absolute left-1 right-1 rounded-lg border px-2 py-1 overflow-hidden text-[11px] leading-tight ${colors[o.status] || colors.pending}`}
+                    className={`absolute left-1 right-1 rounded-lg border px-2 py-1 overflow-visible text-xs leading-relaxed ${colors[o.status] || colors.pending}`}
                     style={style}
                     title={`${o.customerName} · ${o.makeupType} · ¥${o.price}`}>
                     <div className="font-semibold truncate">{o.time?.slice(0,5)} {o.makeupType}</div>

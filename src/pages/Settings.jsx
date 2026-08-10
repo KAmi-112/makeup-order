@@ -1,9 +1,9 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useStore, generateId, themePresets } from '../store.jsx';
 import {
   Plus, Edit3, Trash2, X, Check, Download, Upload,
   Sparkles, AlertCircle, ShieldCheck, Copy, MessageCircle,
-  FileText, ShoppingBag, Palette, ExternalLink, Lock
+  FileText, ShoppingBag, Palette, ExternalLink, Lock, Printer, Clock, Calendar, Megaphone
 } from 'lucide-react';
 
 /* ---- Theme Picker ---- */
@@ -60,7 +60,9 @@ export default function Settings() {
   // ---- 妆造类型 ----
   const [editingType, setEditingType] = useState(null);
   const [showTypeForm, setShowTypeForm] = useState(false);
-  const [typeForm, setTypeForm] = useState({ name: '', defaultPrice: 168, defaultDuration: 1 });
+  const [typeForm, setTypeForm] = useState({ name: '', defaultPrice: 168, defaultDuration: 1, emoji: '💄', desc: '' });
+  const [newDate, setNewDate] = useState('');
+  const [newAnnouncement, setNewAnnouncement] = useState('');
 
   const handleSaveType = () => {
     if (!typeForm.name.trim()) return;
@@ -70,7 +72,7 @@ export default function Settings() {
       dispatch({ type: 'ADD_MAKEUP_TYPE', payload: { ...typeForm, id: generateId() } });
     }
     setShowTypeForm(false); setEditingType(null);
-    setTypeForm({ name: '', defaultPrice: 168, defaultDuration: 1 });
+    setTypeForm({ name: '', defaultPrice: 168, defaultDuration: 1, emoji: '💄', desc: '' });
     showMsg(editingType ? '妆造类型已更新' : '妆造类型已添加');
   };
 
@@ -113,15 +115,6 @@ export default function Settings() {
     );
   };
 
-  // ---- 管理密码 ----
-  const [newPassword, setNewPassword] = useState('');
-  const handleChangePassword = () => {
-    if (!newPassword.trim()) { showMsg('密码不能为空', 'error'); return; }
-    localStorage.setItem('makeup_admin_password', newPassword.trim());
-    setNewPassword('');
-    showMsg('管理密码已更新');
-  };
-
   // ---- 数据管理 ----
   const handleExport = () => {
     const data = JSON.stringify({
@@ -136,7 +129,7 @@ export default function Settings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `西瓜椰订单_备份_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `小荷订单_备份_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
     showMsg('数据已导出！');
@@ -174,7 +167,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-5">
+    <div className="max-w-3xl mx-auto space-y-10 pb-40">
       <h2 className="text-xl font-bold text-warm-800">⚙️ 设置</h2>
 
       {/* Toast */}
@@ -188,7 +181,7 @@ export default function Settings() {
       )}
 
       {/* ========== 外观主题 ========== */}
-      <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-warm-800 flex items-center gap-2">
@@ -202,7 +195,7 @@ export default function Settings() {
       </div>
 
       {/* ========== 约妆须知 ========== */}
-      <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5 overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-warm-800 flex items-center gap-2">
@@ -212,7 +205,7 @@ export default function Settings() {
           </div>
           <div className="flex items-center gap-2">
             <button onClick={handleCopyNotice}
-              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-colors active:scale-95">
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-brand-50 text-brand-600 rounded-xl hover:bg-brand-100 transition-colors active:scale-95">
               <Copy className="w-4 h-4" /> 一键复制
             </button>
             {!noticeEdit ? (
@@ -222,7 +215,7 @@ export default function Settings() {
               </button>
             ) : (
               <button onClick={handleSaveNotice}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-colors active:scale-95">
+                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-brand-500 text-white rounded-xl hover:bg-rose-600 transition-colors active:scale-95">
                 <Check className="w-4 h-4" /> 保存
               </button>
             )}
@@ -234,8 +227,8 @@ export default function Settings() {
             <textarea
               value={noticeText}
               onChange={e => setNoticeText(e.target.value)}
-              rows={14}
-              className="w-full px-4 py-3 rounded-xl border border-rose-200 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-rose-300 focus:border-transparent transition resize-y font-sans"
+              style={{ height: '400px', overflowY: 'auto' }}
+              className="w-full px-4 py-3 rounded-xl border border-brand-200 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-300 resize-none font-sans"
               placeholder="在这里编辑你的约妆须知..."
             />
             <div className="flex justify-between items-center">
@@ -247,14 +240,14 @@ export default function Settings() {
             </div>
           </div>
         ) : (
-          <div className="bg-warm-50 rounded-xl p-4 text-sm text-warm-800/70 leading-relaxed whitespace-pre-wrap max-h-64 overflow-y-auto text-[13px]">
-            {state.notice || <span className="text-warm-800/30">暂未设置约妆须知，点击「编辑」添加</span>}
-          </div>
+          <pre style={{ height: '400px', overflowY: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: '14px', lineHeight: '2', color: '#555', background: '#fafafa', padding: '16px', borderRadius: '12px', margin: 0 }}>
+            {state.notice || <span style={{color:'#aaa'}}>暂未设置约妆须知，点击「编辑」添加</span>}
+          </pre>
         )}
       </div>
 
       {/* ========== 额外服务 ========== */}
-      <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-warm-800 flex items-center gap-2">
@@ -263,27 +256,27 @@ export default function Settings() {
             <p className="text-xs text-warm-800/40 mt-0.5">胶带绷脸、素颜霜、鼻贴、发网等附加收费项</p>
           </div>
           <button onClick={() => { setEditingService(null); setServiceForm({ name: '', price: 0 }); setShowServiceForm(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-colors active:scale-95">
+            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-brand-50 text-brand-600 rounded-xl hover:bg-brand-100 transition-colors active:scale-95">
             <Plus className="w-4 h-4" /> 添加
           </button>
         </div>
 
         {showServiceForm && (
-          <div className="mb-4 p-4 rounded-2xl bg-rose-50/50 border border-rose-100 animate-scale-in">
+          <div className="mb-4 p-4 rounded-2xl bg-brand-50/50 border border-brand-100 animate-scale-in">
             <div className="flex items-end gap-3">
               <div className="flex-1">
                 <label className="block text-xs font-medium text-warm-800/60 mb-1">服务名称</label>
-                <input className="w-full px-3 py-2 rounded-xl border border-rose-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-300 transition"
+                <input className="w-full px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition"
                   value={serviceForm.name} onChange={e => setServiceForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="如：胶带绷脸" />
               </div>
               <div className="w-24">
                 <label className="block text-xs font-medium text-warm-800/60 mb-1">价格 ¥</label>
-                <input type="number" step="1" min="0" className="w-full px-3 py-2 rounded-xl border border-rose-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-300 transition"
+                <input type="number" step="1" min="0" className="w-full px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition"
                   value={serviceForm.price || ''} onChange={e => setServiceForm(f => ({ ...f, price: parseInt(e.target.value) || 0 }))} />
               </div>
               <button onClick={handleSaveService}
-                className="px-4 py-2 bg-rose-500 text-white text-sm rounded-xl hover:bg-rose-600 transition-colors shrink-0">
+                className="px-4 py-2 bg-brand-500 text-white text-sm rounded-xl hover:bg-rose-600 transition-colors shrink-0">
                 {editingService ? '更新' : '添加'}
               </button>
               <button onClick={() => { setShowServiceForm(false); setEditingService(null); }}
@@ -297,13 +290,13 @@ export default function Settings() {
             <p className="text-sm text-warm-800/30 text-center py-6">暂无额外服务，点击「添加」创建</p>
           ) : (
             state.extraServices.map(s => (
-              <div key={s.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-rose-50/30 transition-colors group">
-                <span className="text-sm text-warm-800">{s.name}</span>
+              <div key={s.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-brand-50/30 transition-colors group gap-3">
+                <span className="text-sm text-warm-800 min-w-0 truncate">{s.name}</span>
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-rose-600">{s.price > 0 ? `¥${s.price}` : '免费'}</span>
+                  <span className="text-sm font-semibold text-brand-600">{s.price > 0 ? `¥${s.price}` : '免费'}</span>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => { setEditingService(s); setServiceForm({ name: s.name, price: s.price }); setShowServiceForm(true); }}
-                      className="p-1.5 rounded-lg hover:bg-rose-100 text-warm-800/40 hover:text-rose-600 transition-colors">
+                      className="p-1.5 rounded-lg hover:bg-brand-100 text-warm-800/40 hover:text-brand-600 transition-colors">
                       <Edit3 className="w-3.5 h-3.5" />
                     </button>
                     <button onClick={() => handleDeleteService(s.id)}
@@ -318,8 +311,164 @@ export default function Settings() {
         </div>
       </div>
 
+      {/* ========== 动态价格规则 ========== */}
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5 overflow-hidden">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-warm-800 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-rose-400" /> 动态价格规则
+            </h3>
+            <p className="text-xs text-warm-800/40 mt-0.5">根据时段自动加减价格，小程序同步生效</p>
+          </div>
+        </div>
+        <div className="space-y-3">
+          {[
+            { key: 'weekday_surcharge', label: '工作日非工作时间加价', desc: '周一至周五 18:00~次日07:00', icon: '🌙', color: 'bg-red-50 border-red-200', textColor: 'text-red-600' },
+            { key: 'weekend_discount', label: '周六日非工作时间优惠', desc: '周六日 18:00~次日07:00', icon: '🎉', color: 'bg-green-50 border-green-200', textColor: 'text-green-600' },
+            { key: 'special_dates', label: '特殊日期非工作时间优惠', desc: '手动标记的漫展日等', icon: '⭐', color: 'bg-blue-50 border-blue-200', textColor: 'text-blue-600' },
+          ].map(rule => {
+            const r = state.priceRules?.[rule.key] || { enabled: false, amount: 0, startTime: '18:00', endTime: '07:00' };
+            return (
+              <div key={rule.key} className={`rounded-xl border p-3 flex items-center gap-3 ${rule.color}`}>
+                <span className="text-2xl">{rule.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-sm font-semibold text-warm-800">{rule.label}</span>
+                    <button onClick={() => {
+                      const pr = { ...state.priceRules };
+                      pr[rule.key] = { ...pr[rule.key], enabled: !pr[rule.key].enabled };
+                      dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                    }}
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium transition-colors ${r.enabled ? 'bg-emerald-500 text-white' : 'bg-gray-300 text-gray-500'}`}>
+                      {r.enabled ? '已启用' : '已关闭'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-warm-800/50">{rule.desc}</p>
+                  {r.enabled && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <label className="text-xs text-warm-800/60">
+                        {r.amount >= 0 ? '加价' : '减价'}
+                        <input type="number" min="0" max="200"
+                          value={Math.abs(r.amount)}
+                          onChange={e => {
+                            const pr = { ...state.priceRules };
+                            const sign = r.amount >= 0 ? 1 : -1;
+                            pr[rule.key] = { ...pr[rule.key], amount: sign * (parseInt(e.target.value) || 0) };
+                            dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                          }}
+                          className={`w-16 mx-1 px-2 py-0.5 rounded-lg border text-sm text-center ${rule.textColor}`} /> 元
+                      </label>
+                      {rule.key === 'special_dates' && (
+                        <span className={`text-xs ${rule.textColor}`}>
+                          ({(state.priceRules?.special_dates?.dates || []).length} 个日期)
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ========== 特殊日期管理 ========== */}
+      {state.priceRules?.special_dates?.enabled && (
+        <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5 overflow-hidden">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="font-semibold text-warm-800 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-rose-400" /> 漫展日 / 特殊日期
+              </h3>
+              <p className="text-xs text-warm-800/40 mt-0.5">在这天非工作时间预约自动减¥{Math.abs(state.priceRules?.special_dates?.amount || 10)}</p>
+            </div>
+          </div>
+          {(state.priceRules?.special_dates?.dates || []).length > 0 ? (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {(state.priceRules?.special_dates?.dates || []).map((d, i) => (
+                <span key={i} className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm">
+                  ⭐ {d}
+                  <button onClick={() => {
+                    const pr = { ...state.priceRules };
+                    pr.special_dates = { ...pr.special_dates, dates: pr.special_dates.dates.filter(x => x !== d) };
+                    dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                  }} className="text-blue-400 hover:text-red-500 ml-1">×</button>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-warm-800/40 mb-3">还没有标记任何特殊日期</p>
+          )}
+          <div className="flex gap-2">
+            <input type="date"
+              value={newDate || ''}
+              onChange={e => setNewDate(e.target.value)}
+              className="flex-1 px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition" />
+            <button onClick={() => {
+              if (!newDate) return;
+              if ((state.priceRules?.special_dates?.dates || []).includes(newDate)) {
+                showMsg('该日期已存在', 'error');
+                return;
+              }
+              const pr = { ...state.priceRules };
+              pr.special_dates = { ...pr.special_dates, dates: [...(pr.special_dates.dates || []), newDate].sort() };
+              dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+              setNewDate('');
+              showMsg(`已添加 ${newDate}`);
+            }}
+              className="px-4 py-2 bg-blue-500 text-white text-sm rounded-xl hover:bg-blue-600 transition-colors shrink-0">
+              添加日期
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ========== 滚动公告 ========== */}
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5 overflow-hidden">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-warm-800 flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-rose-400" /> 滚动公告
+            </h3>
+            <p className="text-xs text-warm-800/40 mt-0.5">在小程序首页滚动播放，用户一打开就能看到</p>
+          </div>
+        </div>
+        {(state.announcements || []).length > 0 ? (
+          <div className="space-y-2 mb-3">
+            {(state.announcements || []).map((a, i) => (
+              <div key={i} className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                <span className="text-sm flex-1">{i + 1}. {a}</span>
+                <button onClick={() => {
+                  const arr = [...state.announcements];
+                  arr.splice(i, 1);
+                  dispatch({ type: 'UPDATE_ANNOUNCEMENTS', payload: arr });
+                }} className="text-red-400 hover:text-red-600 text-sm">删除</button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-warm-800/40 mb-3">还没有公告，添加一条试试</p>
+        )}
+        <div className="flex gap-2">
+          <textarea className="flex-1 px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition resize-none"
+            rows="2" placeholder="输入公告内容..."
+            value={newAnnouncement}
+            onChange={e => setNewAnnouncement(e.target.value)} />
+          <button onClick={() => {
+            if (!newAnnouncement.trim()) return;
+            const arr = [...(state.announcements || []), newAnnouncement.trim()];
+            dispatch({ type: 'UPDATE_ANNOUNCEMENTS', payload: arr });
+            setNewAnnouncement('');
+            showMsg('公告已添加');
+          }}
+            className="px-4 py-2 bg-brand-500 text-white text-sm rounded-xl hover:bg-rose-600 transition-colors shrink-0 self-end">
+            添加
+          </button>
+        </div>
+      </div>
+
       {/* ========== 妆造类型 ========== */}
-      <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="font-semibold text-warm-800 flex items-center gap-2">
@@ -327,36 +476,54 @@ export default function Settings() {
             </h3>
             <p className="text-xs text-warm-800/40 mt-0.5">新建订单时自动填充价格和时长，想涨价直接改</p>
           </div>
-          <button onClick={() => { setEditingType(null); setTypeForm({ name: '', defaultPrice: 168, defaultDuration: 1 }); setShowTypeForm(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-100 transition-colors active:scale-95">
+          <button onClick={() => { setEditingType(null); setTypeForm({ name: '', defaultPrice: 168, defaultDuration: 1, emoji: '💄', desc: '' }); setShowTypeForm(true); }}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-brand-50 text-brand-600 rounded-xl hover:bg-brand-100 transition-colors active:scale-95">
             <Plus className="w-4 h-4" /> 添加
+          </button>
+          <button onClick={() => {
+            const types = state.makeupTypes;
+            const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>小荷价格表</title><style>body{font-family:"PingFang SC",sans-serif;max-width:500px;margin:30px auto;color:#333}h1{text-align:center;font-size:20px;color:#ec4899;margin-bottom:4px}.sub{text-align:center;font-size:12px;color:#999;margin-bottom:20px}table{width:100%;border-collapse:collapse}th{background:#fce7f3;color:#be185d;padding:10px 12px;text-align:left;font-size:13px}td{padding:10px 12px;border-bottom:1px solid #fce7f3;font-size:14px}.price{text-align:right;font-weight:700;color:#ec4899}.note{text-align:center;margin-top:20px;font-size:11px;color:#999}.effective{text-align:center;font-size:12px;color:#ec4899;font-weight:600;margin-top:6px}@media print{body{margin:0;padding:10px}}</style></head><body><h1>🪷 小荷约妆</h1><div class="sub">价格表 · '+new Date().toLocaleDateString("zh-CN")+'</div><div class="effective">2026年8月24日起推行</div><table><tr><th>妆造类型</th><th>时长</th><th class="price">价格</th></tr>'+types.map(t=>'<tr><td>'+(t.emoji||"")+' '+t.name+'</td><td>'+(t.defaultDuration||t.duration)+'h</td><td class="price">¥'+(t.defaultPrice||t.price)+'</td></tr>').join("")+'</table><div class="note">📍 地铁5号线凌大塘站D口附近 · 定金¥18 · 妆后面结</div></body></html>';
+            const w=window.open("","_blank");w.document.write(html);w.document.close();setTimeout(()=>w.print(),400);
+          }}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm bg-white border border-brand-200 text-brand-600 rounded-xl hover:bg-brand-50 transition-colors ml-2">
+            <Printer className="w-4 h-4" /> 打印价格表
           </button>
         </div>
 
         {showTypeForm && (
-          <div className="mb-4 p-4 rounded-2xl bg-rose-50/50 border border-rose-100 animate-scale-in">
+          <div className="mb-4 p-4 rounded-2xl bg-brand-50/50 border border-brand-100 animate-scale-in">
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium text-warm-800/60 mb-1">名称</label>
-                <input className="w-full px-3 py-2 rounded-xl border border-rose-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-300 transition"
+                <input className="w-full px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition"
                   value={typeForm.name} onChange={e => setTypeForm(f => ({ ...f, name: e.target.value }))} placeholder="如：晚宴妆" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-warm-800/60 mb-1">默认价格 ¥</label>
-                <input type="number" step="1" min="0" className="w-full px-3 py-2 rounded-xl border border-rose-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-300 transition"
+                <input type="number" step="1" min="0" className="w-full px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition"
                   value={typeForm.defaultPrice} onChange={e => setTypeForm(f => ({ ...f, defaultPrice: parseInt(e.target.value) || 0 }))} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-warm-800/60 mb-1">时长(h)</label>
-                <input type="number" step="0.5" min="0.5" className="w-full px-3 py-2 rounded-xl border border-rose-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-300 transition"
+                <input type="number" step="0.5" min="0.5" className="w-full px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition"
                   value={typeForm.defaultDuration} onChange={e => setTypeForm(f => ({ ...f, defaultDuration: parseFloat(e.target.value) || 0.5 }))} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-warm-800/60 mb-1">图标 Emoji</label>
+                <input className="w-full px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition"
+                  value={typeForm.emoji} onChange={e => setTypeForm(f => ({ ...f, emoji: e.target.value }))} placeholder="如：💄" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-warm-800/60 mb-1">时间说明</label>
+                <input className="w-full px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition"
+                  value={typeForm.desc} onChange={e => setTypeForm(f => ({ ...f, desc: e.target.value }))} placeholder="如：化妆时长：约1-1.5小时" />
               </div>
             </div>
             <div className="flex justify-end gap-2 mt-3">
               <button onClick={() => { setShowTypeForm(false); setEditingType(null); }}
                 className="px-3 py-1.5 text-sm text-warm-800/60 hover:bg-white rounded-lg transition-colors">取消</button>
               <button onClick={handleSaveType}
-                className="px-4 py-1.5 text-sm bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
+                className="px-4 py-1.5 text-sm bg-brand-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
                 {editingType ? '保存' : '添加'}
               </button>
             </div>
@@ -365,9 +532,9 @@ export default function Settings() {
 
         <div className="space-y-1">
           {state.makeupTypes.map(mt => (
-            <div key={mt.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-rose-50/30 transition-colors group">
+            <div key={mt.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-brand-50/30 transition-colors group gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center text-xs font-bold text-rose-600 shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-brand-100 flex items-center justify-center text-xs font-bold text-brand-600 shrink-0">
                   {mt.name.charAt(0)}
                 </div>
                 <div className="min-w-0">
@@ -376,8 +543,8 @@ export default function Settings() {
                 </div>
               </div>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => { setEditingType(mt); setTypeForm({ name: mt.name, defaultPrice: mt.defaultPrice, defaultDuration: mt.defaultDuration }); setShowTypeForm(true); }}
-                  className="p-1.5 rounded-lg hover:bg-rose-100 text-warm-800/40 hover:text-rose-600 transition-colors">
+                <button onClick={() => { setEditingType(mt); setTypeForm({ name: mt.name, defaultPrice: mt.defaultPrice, defaultDuration: mt.defaultDuration, emoji: mt.emoji || '💄', desc: mt.desc || '' }); setShowTypeForm(true); }}
+                  className="p-1.5 rounded-lg hover:bg-brand-100 text-warm-800/40 hover:text-brand-600 transition-colors">
                   <Edit3 className="w-3.5 h-3.5" />
                 </button>
                 <button onClick={() => {
@@ -394,36 +561,27 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* ========== 管理密码 ========== */}
-      <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5">
+      {/* ========== 账号安全 ========== */}
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
         <h3 className="font-semibold text-warm-800 mb-4 flex items-center gap-2">
-          <Lock className="w-4 h-4 text-rose-400" /> 管理密码
+          <Lock className="w-4 h-4 text-rose-400" /> 账号安全
         </h3>
-        <p className="text-xs text-warm-800/40 mb-3">
-          设置后，公网访问管理后台需要输入此密码。本地访问无需密码。
+        <p className="text-sm text-warm-800/55 leading-6">
+          后台已改用 Supabase Auth 验证。密码不再保存在浏览器中，请在 Supabase 的 Authentication 页面修改管理员密码。
         </p>
-        <div className="flex gap-2">
-          <input type="text" className="flex-1 px-3 py-2 rounded-xl border border-rose-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-rose-300 transition"
-            value={newPassword} onChange={e => setNewPassword(e.target.value)}
-            placeholder="输入新密码" />
-          <button onClick={handleChangePassword}
-            className="px-4 py-2 bg-rose-500 text-white text-sm rounded-xl hover:bg-rose-600 transition-colors active:scale-95">
-            保存
-          </button>
-        </div>
       </div>
 
       {/* ========== 数据管理 ========== */}
-      <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
         <h3 className="font-semibold text-warm-800 mb-4 flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-rose-400" /> 数据管理
         </h3>
         <p className="text-xs text-warm-800/40 mb-4">
-          数据存储在浏览器本地。更换设备前请导出备份，然后在新设备导入恢复。
+          订单数据保存在 Supabase 云端。仍建议定期导出备份，防止误操作或数据损坏。
         </p>
         <div className="flex flex-wrap gap-3">
           <button onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2.5 bg-rose-50 text-rose-600 text-sm font-medium rounded-xl hover:bg-rose-100 transition-colors active:scale-95">
+            className="flex items-center gap-2 px-4 py-2.5 bg-brand-50 text-brand-600 text-sm font-medium rounded-xl hover:bg-brand-100 transition-colors active:scale-95">
             <Download className="w-4 h-4" /> 导出备份
           </button>
           <button onClick={handleImport}
@@ -438,7 +596,7 @@ export default function Settings() {
       </div>
 
       {/* 部署指南 */}
-      <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
         <h3 className="font-semibold text-warm-800 mb-3 flex items-center gap-2">
           <ExternalLink className="w-4 h-4 text-rose-400" /> 微信可打开的部署方案
         </h3>
@@ -469,8 +627,8 @@ export default function Settings() {
       </div>
 
       {/* About */}
-      <div className="bg-white rounded-2xl border border-rose-100 shadow-sm p-5">
-        <h3 className="font-semibold text-warm-800 mb-2">💄 关于西瓜椰订单</h3>
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
+        <h3 className="font-semibold text-warm-800 mb-2">💄 关于小荷订单</h3>
         <p className="text-xs text-warm-800/40 leading-relaxed">
           版本 1.2 · 专为独立化妆师打造的订单管理工具<br />
           支持主题换肤 · 微信分享 · PWA 离线使用<br />

@@ -1,30 +1,33 @@
 @import "tailwindcss";
 
 @theme {
-  --color-rose-50: #fff1f2;
-  --color-rose-100: #ffe4e6;
-  --color-rose-150: #fdd0d8;
-  --color-rose-200: #fecdd3;
-  --color-rose-300: #fda4af;
-  --color-rose-400: #fb7185;
-  --color-rose-500: #f43f5e;
-  --color-rose-600: #e11d48;
-  --color-rose-700: #be123c;
-  --color-rose-800: #9f1239;
-  --color-rose-900: #881337;
-  --color-cream: #fef9f0;
-  --color-warm-50: #faf8f5;
-  --color-warm-100: #f5f0e8;
-  --color-warm-200: #ebe0d0;
-  --color-warm-800: #5c4b3a;
+  --color-brand-50: #f2f8f4;
+  --color-brand-100: #e1efe5;
+  --color-brand-200: #c3ddca;
+  --color-brand-300: #97c2a4;
+  --color-brand-400: #65a078;
+  --color-brand-500: #437f59;
+  --color-brand-600: #326746;
+  --color-brand-700: #29533a;
+  --color-brand-800: #244330;
+  --color-brand-900: #1e3829;
+  --color-cream: #f6f5ef;
+  --color-warm-50: #faf9f5;
+  --color-warm-100: #f0eee6;
+  --color-warm-800: #24332b;
+  --color-warm-muted: #788078;
+  --font-heading: 'Songti SC', 'STSong', 'Noto Serif SC', serif;
+  --font-body: 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
+
+body { font-family: var(--font-body); }
+
+h1, h2, h3, h4, .font-heading { font-family: var(--font-heading); }
 
 html {
   height: -webkit-fill-available;
@@ -34,15 +37,30 @@ html {
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  background:
-    radial-gradient(ellipse 80% 60% at 50% -10%, #fce7f3 0%, transparent 60%),
-    radial-gradient(ellipse 60% 50% at 90% 80%, #fef3c7 0%, transparent 50%),
-    #fef9f0;
-  color: #3d2e1f;
+  background: #f4f1ef;
+  color: #332a2f;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.app-shell {
+  background:
+    radial-gradient(circle at 88% 8%, rgba(67, 127, 89, .10), transparent 25%),
+    radial-gradient(circle at 18% 96%, rgba(214, 155, 164, .09), transparent 22%),
+    linear-gradient(145deg, #f8f7f2 0%, #efeee7 100%);
+}
+
+.workspace-content > * {
+  max-width: 1580px;
+  margin-inline: auto;
+}
+
+.panel-luxe {
+  background: rgba(255, 255, 252, .9);
+  border: 1px solid rgba(45, 86, 60, .10);
+  box-shadow: 0 18px 50px rgba(28, 53, 37, .055), 0 2px 8px rgba(28, 53, 37, .035);
 }
 
 /* iOS safe area */
@@ -70,6 +88,31 @@ body {
   from { opacity: 0; transform: scale(0.92); }
   to { opacity: 1; transform: scale(1); }
 }
+@keyframes staggerIn {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.stagger-item {
+  animation: staggerIn 0.4s ease-out both;
+}
+.stagger-item:nth-child(1) { animation-delay: 0s; }
+.stagger-item:nth-child(2) { animation-delay: 0.06s; }
+.stagger-item:nth-child(3) { animation-delay: 0.12s; }
+.stagger-item:nth-child(4) { animation-delay: 0.18s; }
+.stagger-item:nth-child(5) { animation-delay: 0.24s; }
+.stagger-item:nth-child(6) { animation-delay: 0.30s; }
+.stagger-item:nth-child(7) { animation-delay: 0.36s; }
+.stagger-item:nth-child(8) { animation-delay: 0.42s; }
+
+/* 约妆须知独立滚动框 */
+.notice-scroll-box {
+  height: 400px !important;
+  max-height: 400px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  display: block !important;
+}
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
