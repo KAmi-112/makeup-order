@@ -31,17 +31,17 @@ const navItems = [
 /* ======== Desktop Sidebar ======== */
 function DesktopSidebar() {
   return (
-    <aside className="hidden lg:flex flex-col w-[260px] bg-[#193126] text-white shrink-0 border-r border-white/5 relative overflow-hidden">
-      <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full border border-white/5" />
-      <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full border border-white/5" />
-      <div className="px-6 py-7 border-b border-white/8">
+    <aside className="hidden lg:flex flex-col w-[260px] bg-gradient-to-b from-[#f4fbf5] via-[#fffafb] to-[#fffdf9] text-[#355844] shrink-0 border-r border-[#e7eee8] relative overflow-hidden shadow-[10px_0_35px_rgba(86,128,99,.05)]">
+      <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-[#f9dbe2]/45" />
+      <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full border border-[#e9b8c4]/40" />
+      <div className="px-6 py-7 border-b border-[#e3eee5] relative">
         <div className="flex items-center gap-2.5">
-          <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-[#d9a6ae] text-[#193126] shadow-[0_12px_32px_rgba(0,0,0,.2)]">
+          <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#efadbb] to-[#d97991] text-white shadow-[0_12px_28px_rgba(220,127,149,.24)]">
             <Flower2 className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-white tracking-[.08em]">小荷</h1>
-            <p className="text-[9px] text-white/40 tracking-[.24em] uppercase">Xiaohe Studio</p>
+            <h1 className="text-lg font-semibold text-[#315440] tracking-[.08em]">小荷</h1>
+            <p className="text-[9px] text-[#6f967b] tracking-[.24em] uppercase">Xiaohe Studio</p>
           </div>
         </div>
       </div>
@@ -54,8 +54,8 @@ function DesktopSidebar() {
             className={({ isActive }) =>
               `flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                 isActive
-                  ? 'bg-white/10 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,.05)]'
-                  : 'text-white/55 hover:bg-white/5 hover:text-white'
+                  ? 'bg-[#f9e4e9] text-[#a64e66] shadow-[inset_0_0_0_1px_rgba(222,127,150,.12),0_8px_22px_rgba(222,127,150,.10)]'
+                  : 'text-[#66806e] hover:bg-[#edf6ef] hover:text-[#3d6d4d]'
               }`
             }
           >
@@ -64,8 +64,8 @@ function DesktopSidebar() {
           </NavLink>
         ))}
       </nav>
-      <div className="px-6 py-5 border-t border-white/8 text-[11px] text-white/40 flex items-center gap-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_#6ee7b7]" />
+      <div className="px-6 py-5 border-t border-[#e3eee5] text-[11px] text-[#75917d] flex items-center gap-2">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#77b189] shadow-[0_0_10px_#a9d6b4]" />
         安全云端同步
       </div>
     </aside>
@@ -181,7 +181,7 @@ function PublicApp() {
   }, []);
 
   if (session === undefined) {
-    return <div className="min-h-[100dvh] grid place-items-center bg-[#f8f5f2] text-sm text-[#796c73]">正在建立安全连接…</div>;
+    return <div className="min-h-[100dvh] grid place-items-center bg-gradient-to-br from-[#f1f9f2] via-[#fffdf9] to-[#fbe8ed] text-sm text-[#728678]">正在建立安全连接…</div>;
   }
 
   if (!session) {

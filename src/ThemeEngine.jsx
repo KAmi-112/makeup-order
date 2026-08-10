@@ -18,7 +18,9 @@ export default function ThemeEngine() {
     root.style.setProperty('--tp-text', preset.text);
     root.style.setProperty('--tp-muted', preset.textMuted);
     root.style.setProperty('--tp-radius', preset.radius);
-    root.style.setProperty('--tp-gradient', `linear-gradient(135deg, ${preset.primary}, ${preset.primaryDark})`);
+    root.style.setProperty('--tp-gradient', themeId === 'lotus'
+      ? 'linear-gradient(135deg, #e995a8 0%, #d97891 48%, #73a985 100%)'
+      : `linear-gradient(135deg, ${preset.primary}, ${preset.primaryDark})`);
 
     // update theme-color meta for PWA
     const meta = document.querySelector('meta[name="theme-color"]');

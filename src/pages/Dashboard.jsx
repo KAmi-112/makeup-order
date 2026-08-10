@@ -93,18 +93,18 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
       {/* Welcome */}
-      <div className="relative overflow-hidden rounded-[28px] bg-[#203b2d] text-white px-6 py-7 md:px-9 md:py-8 shadow-[0_22px_60px_rgba(25,49,38,.18)] flex items-center justify-between flex-wrap gap-5">
-        <div className="absolute -right-24 -top-24 w-72 h-72 rounded-full border border-white/8" />
-        <div className="absolute right-8 -bottom-28 w-64 h-64 rounded-full bg-[#d49aa5]/10 blur-2xl" />
+      <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-r from-[#edf8ef] via-[#fffaf9] to-[#f8dfe5] text-[#355844] px-6 py-7 md:px-9 md:py-8 border border-white shadow-[0_22px_60px_rgba(91,132,102,.11)] flex items-center justify-between flex-wrap gap-5">
+        <div className="absolute -right-24 -top-24 w-72 h-72 rounded-full border border-[#d98ba0]/25 bg-white/25" />
+        <div className="absolute right-8 -bottom-28 w-64 h-64 rounded-full bg-[#e59bae]/25 blur-2xl" />
         <div className="relative">
-          <p className="text-[11px] tracking-[.24em] text-[#d9a6ae] mb-2">小荷·今日工作台</p>
+          <p className="text-[11px] tracking-[.24em] text-[#c7627a] mb-2">小荷·今日工作台</p>
           <h2 className="text-3xl md:text-4xl font-semibold font-heading tracking-wide">下午好，小荷</h2>
-          <p className="text-sm text-white/55 mt-2">
+          <p className="text-sm text-[#6f8878] mt-2">
             {new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
           </p>
         </div>
         <button onClick={() => navigate('/orders?new=1')}
-          className="relative flex items-center gap-2 px-5 py-3 bg-[#d9a6ae] text-[#203b2d] text-sm font-bold rounded-xl shadow-lg hover:bg-[#e4b8bf] hover:-translate-y-0.5 transition-all active:scale-95">
+          className="relative flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-[#df8298] to-[#ec9caf] text-white text-sm font-bold rounded-xl shadow-[0_12px_28px_rgba(220,127,149,.24)] hover:-translate-y-0.5 transition-all active:scale-95">
           <Sparkles className="w-4 h-4" /> 新建预约
         </button>
       </div>

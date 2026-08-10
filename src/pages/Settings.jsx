@@ -601,7 +601,7 @@ export default function Settings() {
             <div className="flex gap-2">
               <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="建议使用专门的工作邮箱"
                 className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-              <button disabled={accountSaving || !newEmail.trim()} onClick={changeEmail} className="px-4 py-2.5 rounded-xl bg-[#29533a] text-white text-sm font-semibold disabled:opacity-40">更改邮箱</button>
+              <button disabled={accountSaving || !newEmail.trim()} onClick={changeEmail} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#df8298] to-[#70a683] text-white text-sm font-semibold disabled:opacity-40">更改邮箱</button>
             </div>
           </div>
           <div className="rounded-2xl bg-brand-50/50 border border-brand-100 p-4">
@@ -609,7 +609,7 @@ export default function Settings() {
             <div className="flex gap-2">
               <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="至少 10 位，建议混合字母和数字"
                 className="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400" />
-              <button disabled={accountSaving || newPassword.length < 10} onClick={changePassword} className="px-4 py-2.5 rounded-xl bg-[#29533a] text-white text-sm font-semibold disabled:opacity-40">更改密码</button>
+              <button disabled={accountSaving || newPassword.length < 10} onClick={changePassword} className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#df8298] to-[#70a683] text-white text-sm font-semibold disabled:opacity-40">更改密码</button>
             </div>
           </div>
         </div>

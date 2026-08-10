@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #f2f8f4;
-  --color-brand-100: #e1efe5;
-  --color-brand-200: #c3ddca;
-  --color-brand-300: #97c2a4;
-  --color-brand-400: #65a078;
-  --color-brand-500: #437f59;
-  --color-brand-600: #326746;
-  --color-brand-700: #29533a;
-  --color-brand-800: #244330;
-  --color-brand-900: #1e3829;
-  --color-cream: #f6f5ef;
-  --color-warm-50: #faf9f5;
-  --color-warm-100: #f0eee6;
-  --color-warm-800: #24332b;
-  --color-warm-muted: #788078;
+  --color-brand-50: #fff5f7;
+  --color-brand-100: #fde8ed;
+  --color-brand-200: #f7ccd6;
+  --color-brand-300: #efa8b8;
+  --color-brand-400: #e894a7;
+  --color-brand-500: #dc7f95;
+  --color-brand-600: #c86880;
+  --color-brand-700: #aa526a;
+  --color-brand-800: #8d455a;
+  --color-brand-900: #713a4b;
+  --color-cream: #fffdf9;
+  --color-warm-50: #fffdfa;
+  --color-warm-100: #f6f1eb;
+  --color-warm-800: #34483b;
+  --color-warm-muted: #7d8d82;
   --font-heading: 'Songti SC', 'STSong', 'Noto Serif SC', serif;
   --font-body: 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
@@ -37,8 +37,8 @@ html {
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
     'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  background: #f4f1ef;
-  color: #332a2f;
+  background: #fffdf9;
+  color: #34483b;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
   -webkit-font-smoothing: antialiased;
@@ -47,9 +47,9 @@ body {
 
 .app-shell {
   background:
-    radial-gradient(circle at 88% 8%, rgba(67, 127, 89, .10), transparent 25%),
-    radial-gradient(circle at 18% 96%, rgba(214, 155, 164, .09), transparent 22%),
-    linear-gradient(145deg, #f8f7f2 0%, #efeee7 100%);
+    radial-gradient(circle at 88% 7%, rgba(238, 168, 184, .20), transparent 27%),
+    radial-gradient(circle at 10% 92%, rgba(127, 183, 145, .17), transparent 25%),
+    linear-gradient(145deg, #fffefa 0%, #f7fbf7 52%, #fff7f9 100%);
 }
 
 .workspace-content > * {
@@ -59,8 +59,8 @@ body {
 
 .panel-luxe {
   background: rgba(255, 255, 252, .9);
-  border: 1px solid rgba(45, 86, 60, .10);
-  box-shadow: 0 18px 50px rgba(28, 53, 37, .055), 0 2px 8px rgba(28, 53, 37, .035);
+  border: 1px solid rgba(211, 126, 148, .14);
+  box-shadow: 0 18px 50px rgba(92, 126, 101, .07), 0 2px 8px rgba(212, 134, 153, .04);
 }
 
 /* iOS safe area */

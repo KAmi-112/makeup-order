@@ -246,7 +246,7 @@ export const paymentColors = {
 
 // 主题预设（保持不变）
 export const themePresets = [
-  { id: 'lotus', name: '小荷清莲', icon: '🪷', primary: '#437f59', primaryLight: '#f2f8f4', primaryDark: '#29533a', bg: '#f6f5ef', cardBg: '#fffefb', border: '#dce9df', text: '#24332b', textMuted: '#788078', radius: '18px' },
+  { id: 'lotus', name: '小荷清莲', icon: '🪷', primary: '#dc7f95', primaryLight: '#fff4f7', primaryDark: '#4f8b65', bg: '#fffdf9', cardBg: '#ffffff', border: '#f1dfe4', text: '#34483b', textMuted: '#7d8d82', radius: '20px' },
   { id: 'rose', name: '樱花粉', icon: '🌸', primary: '#f43f5e', primaryLight: '#fff1f2', primaryDark: '#e11d48', bg: '#fef9f0', cardBg: '#ffffff', border: '#ffe4e6', text: '#5c4b3a', textMuted: '#9a8a7a', radius: '16px' },
   { id: 'mauve', name: '莫兰迪紫', icon: '🪻', primary: '#8b5cf6', primaryLight: '#f5f3ff', primaryDark: '#7c3aed', bg: '#faf8f7', cardBg: '#ffffff', border: '#ede9fe', text: '#4a3f52', textMuted: '#8a7f92', radius: '14px' },
   { id: 'matcha', name: '抹茶绿', icon: '🍵', primary: '#059669', primaryLight: '#ecfdf5', primaryDark: '#047857', bg: '#f9faf7', cardBg: '#ffffff', border: '#d1fae5', text: '#3d4a3f', textMuted: '#7a8a7d', radius: '12px' },

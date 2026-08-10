@@ -37,14 +37,14 @@ export default function TrashPage() {
     <div className="max-w-6xl mx-auto space-y-5 pb-10">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div>
-          <div className="flex items-center gap-2 text-[#29533a] mb-1">
+          <div className="flex items-center gap-2 text-[#ba6076] mb-1">
             <ArchiveRestore className="w-5 h-5" />
             <span className="text-xs font-semibold tracking-[.18em] uppercase">Order Archive</span>
           </div>
           <h2 className="text-2xl font-bold text-warm-800 font-heading">订单回收站</h2>
           <p className="text-sm text-warm-800/45 mt-1">误删的订单可以恢复；只有“彻底删除”才无法找回。</p>
         </div>
-        <div className="rounded-2xl bg-[#193126] text-white px-5 py-3 shadow-lg">
+        <div className="rounded-2xl bg-gradient-to-br from-[#ec9caf] to-[#72aa85] text-white px-5 py-3 shadow-[0_12px_28px_rgba(215,127,148,.20)]">
           <span className="text-2xl font-semibold">{state.trashedOrders.length}</span>
           <span className="text-xs text-white/55 ml-2">笔已删除订单</span>
         </div>
