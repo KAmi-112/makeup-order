@@ -30,31 +30,50 @@ function getCardConfig(name) {
 }
 
 /* ---- 生成可选时间段 ---- */
+const toMinutes = value => { const [h, m] = (value || '00:00').split(':').map(Number); return h * 60 + (m || 0); };
+
 function generateTimeSlots(date, duration, orders, bookingRules) {
-  const WORK_START = parseInt(bookingRules?.workingHours?.start?.split(':')[0] || '7');
-  const WORK_END = parseInt(bookingRules?.workingHours?.end?.split(':')[0] || '18');
-  const bufferHours = Math.max(0, Number(bookingRules?.bufferMinutes || 0)) / 60;
+  const range = bookingRules?.availableHours || bookingRules?.workingHours || { start: '07:00', end: '18:00' };
+  const rangeStart = toMinutes(range.start);
+  const rangeEnd = toMinutes(range.end);
+  const buffer = Math.max(0, Number(bookingRules?.bufferMinutes || 0));
   const slots = [];
   const bookedRanges = [];
   if (date) {
     orders.forEach(o => {
       if (o.date === date && o.status !== 'cancelled') {
-        const startH = parseInt(o.time?.split(':')[0]) || 0;
-        bookedRanges.push({ start: startH, end: startH + (o.duration || 1) + bufferHours });
+        const start = toMinutes(o.time);
+        bookedRanges.push({ start, end: start + Number(o.duration || 1) * 60 });
       }
     });
   }
-  const maxStart = WORK_END - Math.ceil(duration || 1);
-  for (let h = WORK_START; h <= maxStart; h++) {
-    const endH = h + Math.ceil(duration || 1);
-    const booked = bookedRanges.some(r => h < r.end && endH > r.start);
+  for (let minute = rangeStart; minute + Number(duration || 1) * 60 <= rangeEnd; minute += 30) {
+    const end = minute + Number(duration || 1) * 60;
+    const booked = bookedRanges.some(r => minute < r.end + buffer && end + buffer > r.start);
+    const startText = `${String(Math.floor(minute / 60)).padStart(2, '0')}:${String(minute % 60).padStart(2, '0')}`;
+    const endText = `${String(Math.floor(end / 60)).padStart(2, '0')}:${String(end % 60).padStart(2, '0')}`;
     slots.push({
-      value: `${String(h).padStart(2, '0')}:00`,
-      label: `${String(h).padStart(2, '0')}:00 ~ ${String(endH).padStart(2, '0')}:00`,
+      value: startText,
+      label: `${startText} ~ ${endText}`,
       booked,
     });
   }
   return slots;
+}
+
+function getPriceAdjustment(date, time, rules) {
+  if (!date || !time || !rules) return { amount: 0, label: '' };
+  const windowRule = rules.weekday_surcharge || rules.weekend_discount || rules.special_dates || {};
+  const start = toMinutes(windowRule.startTime || '18:00');
+  const end = toMinutes(windowRule.endTime || '07:00');
+  const current = toMinutes(time);
+  const outside = start > end ? current >= start || current < end : current >= start && current < end;
+  if (!outside) return { amount: 0, label: '' };
+  const day = new Date(`${date}T00:00:00`).getDay();
+  if (rules.special_dates?.enabled && (rules.special_dates.dates || []).includes(date)) return { amount: -Math.abs(Number(rules.special_dates.amount || 0)), label: '特殊日优惠' };
+  if ((day === 0 || day === 6) && rules.weekend_discount?.enabled) return { amount: -Math.abs(Number(rules.weekend_discount.amount || 0)), label: '非工作时间优惠' };
+  if (day >= 1 && day <= 5 && rules.weekday_surcharge?.enabled) return { amount: Math.abs(Number(rules.weekday_surcharge.amount || 0)), label: '非工作时间加价' };
+  return { amount: 0, label: '' };
 }
 
 export default function Menu() {
@@ -97,12 +116,13 @@ export default function Menu() {
     let p = selectedTypeData?.defaultPrice || 0;
     selectedServices.forEach(sid => {
       const svc = state.extraServices.find(s => s.id === sid);
-      if (svc) p += svc.price;
+      if (svc && !(svc.id === 'e2' && /COS正片|COS华改/.test(selectedType || ''))) p += svc.price;
     });
-    return p;
-  }, [selectedTypeData, selectedServices, state.extraServices]);
+    return Math.max(0, p + getPriceAdjustment(date, time, state.priceRules).amount);
+  }, [selectedTypeData, selectedServices, selectedType, state.extraServices, state.priceRules, date, time]);
 
-  const depositAmount = 18;
+  const depositAmount = Number(state.miniappConfig?.depositAmount ?? 18);
+  const priceAdjustment = getPriceAdjustment(date, time, state.priceRules);
   const confirmedServices = useMemo(() =>
     state.extraServices.filter(s => selectedServices.includes(s.id)),
   [selectedServices, state.extraServices]);
@@ -168,7 +188,7 @@ export default function Menu() {
         date: date || new Date().toISOString().slice(0, 10),
         time: time || '09:00',
         duration: selectedTypeData?.defaultDuration || 1,
-        location: '地铁5号线凌大塘站D口附近',
+        location: state.miniappConfig?.location || '',
         makeupType: selectedType,
         price: totalPrice,
         deposit: depositAmount,
@@ -223,7 +243,7 @@ export default function Menu() {
     if (notes) lines.push('', `📝 备注：${notes}`);
     lines.push(
       '',
-      '📍 地铁5号线凌大塘站D口附近'
+      `📍 ${state.miniappConfig?.location || '请联系化妆师确认'}`
     );
     if (weatherLine) lines.splice(lines.length - 1, 0, weatherLine);
     return lines.filter(l => l !== '').join('\n');
@@ -372,6 +392,7 @@ export default function Menu() {
                     <span className="text-xs text-warm-800/40">定金 ¥{depositAmount} · 尾款 ¥{totalPrice - depositAmount}</span>
                   </div>
                   <div className="text-right">
+                    {priceAdjustment.amount !== 0 && <span className="text-[11px] text-emerald-600 block">{priceAdjustment.label} {priceAdjustment.amount > 0 ? '+' : '-'}¥{Math.abs(priceAdjustment.amount)}</span>}
                     <span className="text-xs text-warm-800/40 block">合计</span>
                     <span className="text-2xl font-extrabold text-brand-600">¥{totalPrice}</span>
                   </div>

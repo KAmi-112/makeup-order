@@ -445,15 +445,24 @@ export default function Settings() {
           <button onClick={saveBookingRules} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#5d8b69] text-white text-sm font-semibold"><Save className="w-4 h-4" />保存规则</button>
         </div>
         <div className="grid md:grid-cols-3 gap-3 mb-4">
-          <label className="text-xs text-warm-800/55">开始接单时间
+          <label className="text-xs text-warm-800/55">常规工作开始
             <input type="time" value={bookingDraft?.workingHours?.start || '07:00'} onChange={e => setBookingDraft(r => ({ ...r, workingHours: { ...r.workingHours, start: e.target.value } }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-brand-200 bg-white" />
           </label>
-          <label className="text-xs text-warm-800/55">结束接单时间
+          <label className="text-xs text-warm-800/55">常规工作结束
             <input type="time" value={bookingDraft?.workingHours?.end || '18:00'} onChange={e => setBookingDraft(r => ({ ...r, workingHours: { ...r.workingHours, end: e.target.value } }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-brand-200 bg-white" />
           </label>
           <label className="text-xs text-warm-800/55">订单间隔（分钟）
             <input type="number" min="0" max="180" step="15" value={bookingDraft?.bufferMinutes ?? 30} onChange={e => setBookingDraft(r => ({ ...r, bufferMinutes: Number(e.target.value) }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-brand-200 bg-white" />
           </label>
+        </div>
+        <div className="grid md:grid-cols-2 gap-3 mb-4 rounded-xl bg-[#fff8f4] border border-[#f2ded2] p-3">
+          <label className="text-xs text-warm-800/55">最早可预约时间
+            <input type="time" value={bookingDraft?.availableHours?.start || '05:00'} onChange={e => setBookingDraft(r => ({ ...r, availableHours: { ...(r.availableHours || {}), start: e.target.value } }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-[#ead3c5] bg-white" />
+          </label>
+          <label className="text-xs text-warm-800/55">最晚结束时间
+            <input type="time" value={bookingDraft?.availableHours?.end || '23:00'} onChange={e => setBookingDraft(r => ({ ...r, availableHours: { ...(r.availableHours || {}), end: e.target.value } }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-[#ead3c5] bg-white" />
+          </label>
+          <p className="md:col-span-2 text-[11px] text-warm-800/45">常规工作时间用于计算非工作时段加价/优惠；可预约时间决定客户实际能选择的最早和最晚档期。</p>
         </div>
         <div className="flex gap-2 mb-3">
           <input type="date" value={newBlockedDate} onChange={e => setNewBlockedDate(e.target.value)} className="flex-1 px-3 py-2.5 rounded-xl border border-brand-200" />
