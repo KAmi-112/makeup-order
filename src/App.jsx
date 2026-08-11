@@ -202,8 +202,12 @@ function PublicApp() {
     if (!value) { setSession(null); setMfaRequired(false); return; }
     try {
       const assurance = await getMfaState();
-      setMfaRequired(assurance.currentLevel === 'aal1' && assurance.nextLevel === 'aal2');
-    } catch { setMfaRequired(false); }
+      const hasVerifiedFactor = assurance.factors?.some(factor => factor.status === 'verified');
+      setMfaRequired(Boolean(hasVerifiedFactor && assurance.currentLevel !== 'aal2'));
+    } catch {
+      // 管理端安全检查失败时不能绕过双重验证。
+      setMfaRequired(true);
+    }
     setSession(value);
   };
 

@@ -99,6 +99,8 @@ function reducer(state, action) {
       };
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
+    case 'ROLLBACK_STATE':
+      return action.payload;
 
     case 'ADD_ORDER':
       return { ...state, orders: [...state.orders, action.payload] };
@@ -192,7 +194,8 @@ export function StoreProvider({ children }) {
   // 包装 dispatch：副作用操作（写数据库）
   const dispatchWithCloud = async (action) => {
     // 先同步计算下一状态，避免 React 尚未完成渲染时把旧设置写回云端。
-    const nextState = reducer(stateRef.current, action);
+    const previousState = stateRef.current;
+    const nextState = reducer(previousState, action);
     stateRef.current = nextState;
     dispatch(action);
 
@@ -238,6 +241,8 @@ export function StoreProvider({ children }) {
       return true;
     } catch (e) {
       console.error('Cloud sync error:', e);
+      stateRef.current = previousState;
+      dispatch({ type: 'ROLLBACK_STATE', payload: previousState });
       setSyncStatus({ state: 'error', at: null, error: e.message || '同步失败' });
       return false;
     }

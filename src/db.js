@@ -44,9 +44,15 @@ export async function getMfaState() {
   ]);
   if (assurance.error) throw assurance.error;
   if (factorResult.error) throw factorResult.error;
+  const listed = [
+    ...(factorResult.data?.all || []),
+    ...(factorResult.data?.totp || []),
+    ...(factorResult.data?.phone || []),
+  ];
+  const factors = [...new Map(listed.map(factor => [factor.id, factor])).values()];
   return {
     ...assurance.data,
-    factors: [...(factorResult.data?.totp || []), ...(factorResult.data?.phone || [])],
+    factors,
   };
 }
 
