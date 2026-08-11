@@ -5,10 +5,11 @@ const StoreContext = createContext(null);
 
 // ---- 默认价格表 ----
 const defaultMakeupTypes = [
-  { id: '1', name: '日常妆 / lo妆', defaultPrice: 38, defaultDuration: 1.5 },
-  { id: '2', name: 'COS展妆', defaultPrice: 42, defaultDuration: 1.5 },
-  { id: '3', name: 'COS正片妆', defaultPrice: 48, defaultDuration: 2 },
-  { id: '4', name: 'COS华改妆', defaultPrice: 58, defaultDuration: 2 },
+  { id: '1', name: '日常妆/通勤妆', defaultPrice: 42, defaultDuration: 1 },
+  { id: '1.5', name: 'Lo妆/约会妆/生日妆', defaultPrice: 48, defaultDuration: 1.5 },
+  { id: '2', name: 'COS展妆', defaultPrice: 58, defaultDuration: 1.5 },
+  { id: '3', name: 'COS正片妆', defaultPrice: 66, defaultDuration: 2 },
+  { id: 'msisykenz7vm0l', name: 'COS华改妆', defaultPrice: 72, defaultDuration: 2 },
 ];
 
 // ---- 默认额外服务 ----
