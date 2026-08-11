@@ -63,17 +63,13 @@ function generateTimeSlots(date, duration, orders, bookingRules) {
 
 function getPriceAdjustment(date, time, rules) {
   if (!date || !time || !rules) return { amount: 0, label: '' };
-  const windowRule = rules.weekday_surcharge || rules.weekend_discount || rules.special_dates || {};
+  const windowRule = rules.evening_surcharge || {};
+  if (!windowRule.enabled) return { amount: 0, label: '' };
   const start = toMinutes(windowRule.startTime || '18:00');
-  const end = toMinutes(windowRule.endTime || '07:00');
+  const end = toMinutes(windowRule.endTime || '23:00');
   const current = toMinutes(time);
-  const outside = start > end ? current >= start || current < end : current >= start && current < end;
-  if (!outside) return { amount: 0, label: '' };
-  const day = new Date(`${date}T00:00:00`).getDay();
-  if (rules.special_dates?.enabled && (rules.special_dates.dates || []).includes(date)) return { amount: -Math.abs(Number(rules.special_dates.amount || 0)), label: '特殊日优惠' };
-  if ((day === 0 || day === 6) && rules.weekend_discount?.enabled) return { amount: -Math.abs(Number(rules.weekend_discount.amount || 0)), label: '非工作时间优惠' };
-  if (day >= 1 && day <= 5 && rules.weekday_surcharge?.enabled) return { amount: Math.abs(Number(rules.weekday_surcharge.amount || 0)), label: '非工作时间加价' };
-  return { amount: 0, label: '' };
+  const inWindow = current >= start && current < end;
+  return inWindow ? { amount: Math.abs(Number(windowRule.amount || 10)), label: '18:00 后妆位加价' } : { amount: 0, label: '' };
 }
 
 export default function Menu() {

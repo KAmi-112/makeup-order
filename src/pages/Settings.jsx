@@ -391,11 +391,9 @@ export default function Settings() {
         </div>
         <div className="space-y-3">
           {[
-            { key: 'weekday_surcharge', label: '工作日非工作时间加价', desc: '周一至周五 18:00~次日07:00', icon: '🌙', color: 'bg-red-50 border-red-200', textColor: 'text-red-600' },
-            { key: 'weekend_discount', label: '周六日非工作时间优惠', desc: '周六日 18:00~次日07:00', icon: '🎉', color: 'bg-green-50 border-green-200', textColor: 'text-green-600' },
-            { key: 'special_dates', label: '特殊日期非工作时间优惠', desc: '手动标记的漫展日等', icon: '⭐', color: 'bg-blue-50 border-blue-200', textColor: 'text-blue-600' },
+            { key: 'evening_surcharge', label: '晚间妆位加价', desc: '每天 18:00~23:00', icon: '🌙', color: 'bg-red-50 border-red-200', textColor: 'text-red-600' },
           ].map(rule => {
-            const r = state.priceRules?.[rule.key] || { enabled: false, amount: 0, startTime: '18:00', endTime: '07:00' };
+            const r = state.priceRules?.[rule.key] || { enabled: true, amount: 10, startTime: '18:00', endTime: '23:00' };
             return (
               <div key={rule.key} className={`rounded-xl border p-3 flex items-center gap-3 ${rule.color}`}>
                 <span className="text-2xl">{rule.icon}</span>
@@ -426,11 +424,6 @@ export default function Settings() {
                           }}
                           className={`w-16 mx-1 px-2 py-0.5 rounded-lg border text-sm text-center ${rule.textColor}`} /> 元
                       </label>
-                      {rule.key === 'special_dates' && (
-                        <span className={`text-xs ${rule.textColor}`}>
-                          ({(state.priceRules?.special_dates?.dates || []).length} 个日期)
-                        </span>
-                      )}
                     </div>
                   )}
                 </div>
@@ -505,7 +498,7 @@ export default function Settings() {
               <h3 className="font-semibold text-warm-800 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-rose-400" /> 漫展日 / 特殊日期
               </h3>
-              <p className="text-xs text-warm-800/40 mt-0.5">在这天非工作时间预约自动减¥{Math.abs(state.priceRules?.special_dates?.amount || 10)}</p>
+              <p className="text-xs text-warm-800/40 mt-0.5">用于标记漫展、节假日等重要日期；晚间仍统一加 ¥10</p>
             </div>
           </div>
           {(state.priceRules?.special_dates?.dates || []).length > 0 ? (

@@ -60,11 +60,10 @@ function getInitialState() {
     theme: 'lotus',
     menuPass: '小荷',
     /* 动态价格规则 */
-    priceRules: {
-      weekday_surcharge: { enabled: true, startTime: '18:00', endTime: '07:00', amount: 10 },
-      weekend_discount: { enabled: true, startTime: '18:00', endTime: '07:00', amount: -10 },
-      special_dates: { enabled: true, startTime: '18:00', endTime: '07:00', amount: -10, dates: [] },
-    },
+      priceRules: {
+        evening_surcharge: { enabled: true, startTime: '18:00', endTime: '23:00', amount: 10 },
+        special_dates: { enabled: true, dates: [], names: {} },
+      },
     /* 滚动公告 */
     announcements: [],
     topQuotes: defaultTopQuotes,
