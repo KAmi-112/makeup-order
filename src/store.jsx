@@ -162,6 +162,7 @@ function reducer(state, action) {
 
 export function StoreProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, null, getInitialState);
+  const [syncStatus, setSyncStatus] = useState({ state: 'idle', at: null, error: '' });
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -227,12 +228,15 @@ export function StoreProvider({ children }) {
         case 'UPDATE_REMINDER_TEMPLATES':
         case 'SET_THEME':
         case 'IMPORT_DATA': {
+          setSyncStatus({ state: 'saving', at: null, error: '' });
           await saveSettingsToCloud(nextState);
+          setSyncStatus({ state: 'saved', at: new Date(), error: '' });
           break;
         }
       }
     } catch (e) {
       console.error('Cloud sync error:', e);
+      setSyncStatus({ state: 'error', at: null, error: e.message || '同步失败' });
     }
   };
 
@@ -263,8 +267,9 @@ export function StoreProvider({ children }) {
   return (
     <StoreContext.Provider value={{
       state,
-      dispatch: dispatchWithCloud,
-      saveSettings: saveSettingsToCloud,
+        dispatch: dispatchWithCloud,
+        saveSettings: saveSettingsToCloud,
+        syncStatus,
     }}>
       {children}
     </StoreContext.Provider>

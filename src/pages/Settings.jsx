@@ -52,7 +52,7 @@ function ThemePicker() {
 }
 
 export default function Settings() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, syncStatus } = useStore();
 
   // ---- Toast ----
   const [msg, setMsg] = useState(null);
@@ -66,6 +66,7 @@ export default function Settings() {
   const [showTypeForm, setShowTypeForm] = useState(false);
   const [typeForm, setTypeForm] = useState({ name: '', defaultPrice: 168, defaultDuration: 1, emoji: '💄', desc: '' });
   const [newDate, setNewDate] = useState('');
+  const [newDateName, setNewDateName] = useState('');
   const [newAnnouncement, setNewAnnouncement] = useState('');
   const [quoteDrafts, setQuoteDrafts] = useState(state.topQuotes || []);
   const [newTopQuote, setNewTopQuote] = useState('');
@@ -232,6 +233,10 @@ export default function Settings() {
   return (
     <div className="max-w-3xl mx-auto space-y-10 pb-40">
       <h2 className="text-xl font-bold text-warm-800">⚙️ 设置</h2>
+      <div className={`rounded-xl px-4 py-2.5 text-sm flex items-center justify-between ${syncStatus.state === 'error' ? 'bg-red-50 text-red-700' : syncStatus.state === 'saving' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+        <span>{syncStatus.state === 'saving' ? '正在同步…' : syncStatus.state === 'error' ? '云端同步失败，请重试' : syncStatus.at ? '已同步到云端' : '设置修改后自动同步'}</span>
+        {syncStatus.at && <span className="text-xs opacity-70">{syncStatus.at.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
+      </div>
 
       {/* Toast */}
       {msg && (
@@ -507,11 +512,14 @@ export default function Settings() {
             <div className="flex flex-wrap gap-2 mb-3">
               {(state.priceRules?.special_dates?.dates || []).map((d, i) => (
                 <span key={i} className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm">
-                  ⭐ {d}
-                  <button onClick={() => {
+                    ⭐ {d}
+                    {(state.priceRules?.special_dates?.names || {})[d] ? ` · ${state.priceRules.special_dates.names[d]}` : ''}
+                  <button onClick={async () => {
                     const pr = { ...state.priceRules };
-                    pr.special_dates = { ...pr.special_dates, dates: pr.special_dates.dates.filter(x => x !== d) };
-                    dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                    const names = { ...(pr.special_dates.names || {}) };
+                    delete names[d];
+                    pr.special_dates = { ...pr.special_dates, dates: pr.special_dates.dates.filter(x => x !== d), names };
+                    await dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
                   }} className="text-blue-400 hover:text-red-500 ml-1">×</button>
                 </span>
               ))}
@@ -524,6 +532,8 @@ export default function Settings() {
               value={newDate || ''}
               onChange={e => setNewDate(e.target.value)}
               className="flex-1 px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition" />
+            <input value={newDateName} maxLength="20" onChange={e => setNewDateName(e.target.value)} placeholder="名称，如CP漫展"
+              className="flex-1 px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white" />
             <button onClick={async () => {
               if (!newDate) return;
               if ((state.priceRules?.special_dates?.dates || []).includes(newDate)) {
@@ -531,9 +541,10 @@ export default function Settings() {
                 return;
               }
               const pr = { ...state.priceRules };
-              pr.special_dates = { ...pr.special_dates, dates: [...(pr.special_dates.dates || []), newDate].sort() };
+              pr.special_dates = { ...pr.special_dates, dates: [...(pr.special_dates.dates || []), newDate].sort(), names: { ...(pr.special_dates.names || {}), [newDate]: newDateName.trim() } };
                 await dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
                 setNewDate('');
+                setNewDateName('');
                 showMsg(`已同步特殊日期 ${newDate}`);
             }}
               className="px-4 py-2 bg-blue-500 text-white text-sm rounded-xl hover:bg-blue-600 transition-colors shrink-0">
