@@ -160,19 +160,19 @@ export async function permanentlyDeleteOrder(id) {
 }
 
 export async function fetchSettings() {
-  if (!cloudReady) { const l=localGet()||{}; return {makeupTypes:l.makeupTypes??[],extraServices:l.extraServices??[],notice:l.notice??'',theme:l.theme??'lotus',topQuotes:l.topQuotes??[],bookingRules:l.bookingRules??null,reminderTemplates:l.reminderTemplates??[]}; }
+  if (!cloudReady) { const l=localGet()||{}; return {makeupTypes:l.makeupTypes??[],extraServices:l.extraServices??[],notice:l.notice??'',theme:l.theme??'lotus',topQuotes:l.topQuotes??[],bookingRules:l.bookingRules??null,miniappConfig:l.miniappConfig??null,reminderTemplates:l.reminderTemplates??[]}; }
   const { data, error } = await supabase.from('settings').select('*').single();
   if (error) return {makeupTypes:[],extraServices:[],notice:'',theme:'lotus',priceRules:null,announcements:[],topQuotes:[],bookingRules:null,reminderTemplates:[]};
   if(!data) return {makeupTypes:[],extraServices:[],notice:'',theme:'lotus',priceRules:null,announcements:[],topQuotes:[],bookingRules:null,reminderTemplates:[]};
   const types = (data.makeup_types||[]).map(t => ({...t, defaultPrice: t.price ?? t.defaultPrice ?? 0, defaultDuration: t.duration ?? t.defaultDuration ?? 1}));
-  return {makeupTypes:types,extraServices:data.extra_services??[],notice:data.notice??'',theme:data.theme??'lotus',priceRules:data.price_rules??null,announcements:data.announcements??[],topQuotes:data.top_quotes??[],bookingRules:data.booking_rules??null,reminderTemplates:data.reminder_templates??[]};
+  return {makeupTypes:types,extraServices:data.extra_services??[],notice:data.notice??'',theme:data.theme??'lotus',priceRules:data.price_rules??null,announcements:data.announcements??[],topQuotes:data.top_quotes??[],bookingRules:data.booking_rules??null,miniappConfig:data.miniapp_config??null,reminderTemplates:data.reminder_templates??[]};
 }
 
 export async function saveSettings(s) {
   if (!cloudReady) { const l=localGet()||{}; Object.assign(l,s); localSet(l); return; }
   // 标准化字段：确保 price/duration 同步到 Supabase
   const types = (s.makeupTypes || []).map(t => ({...t, price: t.defaultPrice ?? t.price ?? 0, duration: t.defaultDuration ?? t.duration ?? 1}));
-  const { error } = await supabase.from('settings').upsert({id:1,makeup_types:types,extra_services:s.extraServices,notice:s.notice,theme:s.theme,price_rules:s.priceRules,announcements:s.announcements,top_quotes:s.topQuotes,booking_rules:s.bookingRules,reminder_templates:s.reminderTemplates,updated_at:new Date().toISOString()});
+  const { error } = await supabase.from('settings').upsert({id:1,makeup_types:types,extra_services:s.extraServices,notice:s.notice,theme:s.theme,price_rules:s.priceRules,announcements:s.announcements,top_quotes:s.topQuotes,booking_rules:s.bookingRules,miniapp_config:s.miniappConfig,reminder_templates:s.reminderTemplates,updated_at:new Date().toISOString()});
   if (error) throw error;
 }
 

@@ -71,6 +71,7 @@ export default function Settings() {
   const [newTopQuote, setNewTopQuote] = useState('');
   const [newBlockedDate, setNewBlockedDate] = useState('');
   const [bookingDraft, setBookingDraft] = useState(state.bookingRules);
+  const [miniappDraft, setMiniappDraft] = useState(state.miniappConfig);
   const [reminderDrafts, setReminderDrafts] = useState(state.reminderTemplates || []);
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -78,6 +79,7 @@ export default function Settings() {
 
   useEffect(() => setQuoteDrafts(state.topQuotes || []), [state.topQuotes]);
   useEffect(() => setBookingDraft(state.bookingRules), [state.bookingRules]);
+  useEffect(() => setMiniappDraft(state.miniappConfig), [state.miniappConfig]);
   useEffect(() => setReminderDrafts(state.reminderTemplates || []), [state.reminderTemplates]);
 
   const saveTopQuotes = () => {
@@ -90,6 +92,11 @@ export default function Settings() {
   const saveBookingRules = () => {
     dispatch({ type: 'UPDATE_BOOKING_RULES', payload: bookingDraft });
     showMsg('接单日期与时间规则已保存');
+  };
+
+  const saveMiniappConfig = () => {
+    dispatch({ type: 'UPDATE_MINIAPP_CONFIG', payload: miniappDraft });
+    showMsg('小程序基础信息已同步到云端');
   };
 
   const saveReminderTemplates = () => {
@@ -603,6 +610,26 @@ export default function Settings() {
             className="px-4 py-2 bg-brand-500 text-white text-sm rounded-xl hover:bg-rose-600 transition-colors shrink-0 self-end">
             添加
           </button>
+        </div>
+      </div>
+
+      {/* ========== 小程序云端基础信息 ========== */}
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="font-semibold text-warm-800 flex items-center gap-2"><ShoppingBag className="w-4 h-4 text-[#66a078]" /> 小程序基础信息</h3>
+            <p className="text-xs text-warm-800/40 mt-1">保存后，小程序再次进入页面时自动读取，不需要重新改代码。</p>
+          </div>
+          <button onClick={saveMiniappConfig} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#629374] text-white text-sm font-semibold"><Save className="w-4 h-4" /> 保存并同步</button>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <label className="text-xs text-warm-800/60">小程序名称<input value={miniappDraft?.brandName || ''} onChange={e => setMiniappDraft(v => ({ ...v, brandName: e.target.value }))} className="mt-1 w-full px-3 py-2.5 rounded-xl border border-brand-200 text-sm" /></label>
+          <label className="text-xs text-warm-800/60">定金金额<input type="number" min="0" value={miniappDraft?.depositAmount ?? 18} onChange={e => setMiniappDraft(v => ({ ...v, depositAmount: Number(e.target.value) || 0 }))} className="mt-1 w-full px-3 py-2.5 rounded-xl border border-brand-200 text-sm" /></label>
+          <label className="text-xs text-warm-800/60">工作室位置<input value={miniappDraft?.location || ''} onChange={e => setMiniappDraft(v => ({ ...v, location: e.target.value }))} className="mt-1 w-full px-3 py-2.5 rounded-xl border border-brand-200 text-sm" /></label>
+          <label className="text-xs text-warm-800/60">联系微信<input value={miniappDraft?.artistWechat || ''} onChange={e => setMiniappDraft(v => ({ ...v, artistWechat: e.target.value }))} className="mt-1 w-full px-3 py-2.5 rounded-xl border border-brand-200 text-sm" /></label>
+          <label className="text-xs text-warm-800/60">工作时间补充说明<input value={miniappDraft?.workHoursNote || ''} onChange={e => setMiniappDraft(v => ({ ...v, workHoursNote: e.target.value }))} className="mt-1 w-full px-3 py-2.5 rounded-xl border border-brand-200 text-sm" /></label>
+          <label className="text-xs text-warm-800/60">最多可提前预约天数<input type="number" min="1" max="365" value={miniappDraft?.maxDaysAhead ?? 365} onChange={e => setMiniappDraft(v => ({ ...v, maxDaysAhead: Math.min(365, Math.max(1, Number(e.target.value) || 1)) }))} className="mt-1 w-full px-3 py-2.5 rounded-xl border border-brand-200 text-sm" /></label>
+          <label className="text-xs text-warm-800/60 sm:col-span-2">首页重要提醒<textarea rows="2" value={miniappDraft?.warningText || ''} onChange={e => setMiniappDraft(v => ({ ...v, warningText: e.target.value }))} className="mt-1 w-full px-3 py-2.5 rounded-xl border border-brand-200 text-sm resize-none" /></label>
         </div>
       </div>
 

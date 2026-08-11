@@ -33,6 +33,16 @@ const defaultBookingRules = {
   bufferMinutes: 30,
 };
 
+const defaultMiniappConfig = {
+  brandName: '西瓜椰约妆',
+  depositAmount: 18,
+  location: '地铁5号线凌大塘站D口附近',
+  artistWechat: '',
+  workHoursNote: '非工作时间加位需钞能力',
+  warningText: '请认真阅读约妆须知并自觉遵守，不要把家长或异性亲友带来后再询问。',
+  maxDaysAhead: 365,
+};
+
 const defaultReminderTemplates = [
   { id: 'confirm', name: '预约确认', content: '你好呀，已为你确认 {date} {time} 的 {makeupType}，地点：{location}。请提前安排好出行时间。' },
   { id: 'before', name: '出发提醒', content: '温馨提醒：明天 {time} 是你的 {makeupType} 预约，请带好需要搭配的服装、假发或饰品。' },
@@ -58,6 +68,7 @@ function getInitialState() {
     announcements: [],
     topQuotes: defaultTopQuotes,
     bookingRules: defaultBookingRules,
+    miniappConfig: defaultMiniappConfig,
     reminderTemplates: defaultReminderTemplates,
     loading: true,
     cloudReady: db.cloudReady,
@@ -80,6 +91,7 @@ function reducer(state, action) {
         announcements: action.payload.announcements || state.announcements,
         topQuotes: action.payload.topQuotes?.length ? action.payload.topQuotes : state.topQuotes,
         bookingRules: action.payload.bookingRules || state.bookingRules,
+        miniappConfig: action.payload.miniappConfig || state.miniappConfig,
         reminderTemplates: action.payload.reminderTemplates?.length ? action.payload.reminderTemplates : state.reminderTemplates,
         loading: false,
       };
@@ -125,6 +137,8 @@ function reducer(state, action) {
       return { ...state, topQuotes: action.payload };
     case 'UPDATE_BOOKING_RULES':
       return { ...state, bookingRules: action.payload };
+    case 'UPDATE_MINIAPP_CONFIG':
+      return { ...state, miniappConfig: action.payload };
     case 'UPDATE_REMINDER_TEMPLATES':
       return { ...state, reminderTemplates: action.payload };
     case 'SET_THEME':
@@ -206,6 +220,7 @@ export function StoreProvider({ children }) {
         case 'UPDATE_ANNOUNCEMENTS':
         case 'UPDATE_TOP_QUOTES':
         case 'UPDATE_BOOKING_RULES':
+        case 'UPDATE_MINIAPP_CONFIG':
         case 'UPDATE_REMINDER_TEMPLATES':
         case 'SET_THEME':
         case 'IMPORT_DATA': {
@@ -231,6 +246,7 @@ export function StoreProvider({ children }) {
         announcements: s.announcements,
         topQuotes: s.topQuotes,
         bookingRules: s.bookingRules,
+        miniappConfig: s.miniappConfig,
         reminderTemplates: s.reminderTemplates,
       });
     } catch (e) {
