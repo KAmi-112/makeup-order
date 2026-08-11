@@ -391,6 +391,8 @@ export default function Settings() {
         </div>
         <div className="space-y-3">
           {[
+            { key: 'morning_weekday_surcharge', label: '工作日早间加价', desc: '周一至周五 05:00~07:00', icon: '☀️', color: 'bg-amber-50 border-amber-200', textColor: 'text-amber-700' },
+            { key: 'morning_weekend_special_discount', label: '周末／漫展日早间优惠', desc: '周末或漫展日 05:00~07:00', icon: '🎟️', color: 'bg-green-50 border-green-200', textColor: 'text-green-700' },
             { key: 'evening_surcharge', label: '晚间妆位加价', desc: '每天 18:00~23:00', icon: '🌙', color: 'bg-red-50 border-red-200', textColor: 'text-red-600' },
           ].map(rule => {
             const r = state.priceRules?.[rule.key] || { enabled: true, amount: 10, startTime: '18:00', endTime: '23:00' };
@@ -512,7 +514,8 @@ export default function Settings() {
                     const names = { ...(pr.special_dates.names || {}) };
                     delete names[d];
                     pr.special_dates = { ...pr.special_dates, dates: pr.special_dates.dates.filter(x => x !== d), names };
-                    await dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                    const saved = await dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                    showMsg(saved ? `已删除特殊日期 ${d}` : '删除失败，请检查网络后重试', saved ? 'success' : 'error');
                   }} className="text-blue-400 hover:text-red-500 ml-1">×</button>
                 </span>
               ))}
@@ -535,7 +538,11 @@ export default function Settings() {
               }
               const pr = { ...state.priceRules };
               pr.special_dates = { ...pr.special_dates, dates: [...(pr.special_dates.dates || []), newDate].sort(), names: { ...(pr.special_dates.names || {}), [newDate]: newDateName.trim() } };
-                await dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                const saved = await dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                if (!saved) {
+                  showMsg('云端同步失败，请检查登录或网络后重试', 'error');
+                  return;
+                }
                 setNewDate('');
                 setNewDateName('');
                 showMsg(`已同步特殊日期 ${newDate}`);
@@ -597,10 +604,11 @@ export default function Settings() {
             {(state.announcements || []).map((a, i) => (
               <div key={i} className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
                 <span className="text-sm flex-1">{i + 1}. {a}</span>
-                <button onClick={() => {
+                <button onClick={async () => {
                   const arr = [...state.announcements];
                   arr.splice(i, 1);
-                  dispatch({ type: 'UPDATE_ANNOUNCEMENTS', payload: arr });
+                  const saved = await dispatch({ type: 'UPDATE_ANNOUNCEMENTS', payload: arr });
+                  showMsg(saved ? '公告已删除并同步' : '删除失败，请检查网络后重试', saved ? 'success' : 'error');
                 }} className="text-red-400 hover:text-red-600 text-sm">删除</button>
               </div>
             ))}
@@ -616,7 +624,11 @@ export default function Settings() {
           <button onClick={async () => {
             if (!newAnnouncement.trim()) return;
             const arr = [...(state.announcements || []), newAnnouncement.trim()];
-            await dispatch({ type: 'UPDATE_ANNOUNCEMENTS', payload: arr });
+            const saved = await dispatch({ type: 'UPDATE_ANNOUNCEMENTS', payload: arr });
+            if (!saved) {
+              showMsg('公告同步失败，请检查登录或网络后重试', 'error');
+              return;
+            }
             setNewAnnouncement('');
             showMsg('公告已同步到小程序');
           }}

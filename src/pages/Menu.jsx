@@ -63,13 +63,24 @@ function generateTimeSlots(date, duration, orders, bookingRules) {
 
 function getPriceAdjustment(date, time, rules) {
   if (!date || !time || !rules) return { amount: 0, label: '' };
-  const windowRule = rules.evening_surcharge || {};
-  if (!windowRule.enabled) return { amount: 0, label: '' };
-  const start = toMinutes(windowRule.startTime || '18:00');
-  const end = toMinutes(windowRule.endTime || '23:00');
   const current = toMinutes(time);
-  const inWindow = current >= start && current < end;
-  return inWindow ? { amount: Math.abs(Number(windowRule.amount || 10)), label: '18:00 后妆位加价' } : { amount: 0, label: '' };
+  const evening = rules.evening_surcharge || {};
+  if (evening.enabled && current >= toMinutes(evening.startTime || '18:00') && current < toMinutes(evening.endTime || '23:00')) {
+    return { amount: Math.abs(Number(evening.amount || 10)), label: '晚间妆位加价' };
+  }
+  const morningStart = toMinutes('05:00');
+  const morningEnd = toMinutes('07:00');
+  if (current >= morningStart && current < morningEnd) {
+    const day = new Date(`${date}T00:00:00`).getDay();
+    const special = (rules.special_dates?.dates || []).includes(date);
+    if (special || day === 0 || day === 6) {
+      const discount = rules.morning_weekend_special_discount || {};
+      return discount.enabled ? { amount: -Math.abs(Number(discount.amount || -10)), label: special ? '漫展日早间优惠' : '周末早间优惠' } : { amount: 0, label: '' };
+    }
+    const surcharge = rules.morning_weekday_surcharge || {};
+    return surcharge.enabled ? { amount: Math.abs(Number(surcharge.amount || 10)), label: '工作日早间加价' } : { amount: 0, label: '' };
+  }
+  return { amount: 0, label: '' };
 }
 
 export default function Menu() {

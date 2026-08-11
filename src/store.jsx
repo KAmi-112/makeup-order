@@ -61,6 +61,8 @@ function getInitialState() {
     menuPass: '小荷',
     /* 动态价格规则 */
       priceRules: {
+        morning_weekday_surcharge: { enabled: true, startTime: '05:00', endTime: '07:00', amount: 10 },
+        morning_weekend_special_discount: { enabled: true, startTime: '05:00', endTime: '07:00', amount: -10 },
         evening_surcharge: { enabled: true, startTime: '18:00', endTime: '23:00', amount: 10 },
         special_dates: { enabled: true, dates: [], names: {} },
       },
@@ -233,17 +235,18 @@ export function StoreProvider({ children }) {
           break;
         }
       }
+      return true;
     } catch (e) {
       console.error('Cloud sync error:', e);
       setSyncStatus({ state: 'error', at: null, error: e.message || '同步失败' });
+      return false;
     }
   };
 
   // 保存设置到云端（本地模式则存 localStorage）
   const saveSettingsToCloud = async (snapshot = stateRef.current) => {
     const s = snapshot;
-    try {
-      await db.saveSettings({
+    await db.saveSettings({
         makeupTypes: s.makeupTypes,
         extraServices: s.extraServices,
         notice: s.notice,
@@ -254,10 +257,7 @@ export function StoreProvider({ children }) {
         bookingRules: s.bookingRules,
         miniappConfig: s.miniappConfig,
         reminderTemplates: s.reminderTemplates,
-      });
-    } catch (e) {
-      console.error('Failed to save settings:', e);
-    }
+    });
   };
 
   // 自动同步已关闭（手动保存即可）
