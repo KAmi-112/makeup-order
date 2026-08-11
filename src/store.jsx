@@ -174,19 +174,31 @@ export function StoreProvider({ children }) {
 
   // 初始化加载
   useEffect(() => {
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
     async function load() {
-      try {
-        const orders = await db.fetchOrders();
-        const trashedOrders = await db.fetchTrashedOrders();
-        const settings = await db.fetchSettings();
-        dispatch({
-          type: 'LOAD_DATA',
-          payload: { orders, trashedOrders, ...settings },
-        });
-      } catch (e) {
-        console.error('Failed to load data:', e);
-        dispatch({ type: 'SET_LOADING', payload: false });
+      let lastError;
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+          const [orders, trashedOrders, settings] = await Promise.all([
+            db.fetchOrders(),
+            db.fetchTrashedOrders(),
+            db.fetchSettings(),
+          ]);
+          dispatch({
+            type: 'LOAD_DATA',
+            payload: { orders, trashedOrders, ...settings },
+          });
+          setSyncStatus({ state: 'synced', at: new Date().toISOString(), error: '' });
+          return;
+        } catch (e) {
+          lastError = e;
+          if (attempt < 3) await wait(attempt * 500);
+        }
       }
+      console.error('Failed to load cloud data:', lastError);
+      setSyncStatus({ state: 'error', at: null, error: lastError?.message || '云端读取失败' });
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
     load();
   }, []);

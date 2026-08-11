@@ -113,7 +113,8 @@ export function onAuthStateChange(callback) {
 export async function fetchOrders() {
   if (!cloudReady) return localGet()?.orders ?? [];
   const { data, error } = await supabase.from('orders').select('*').is('deleted_at', null).order('created_at', { ascending: false });
-  if (error) return [];
+  // 读取失败不能伪装成“0 个订单”，否则管理员会误以为订单被清空。
+  if (error) throw error;
   const local = localGet() || {}; local.orders = data.map(mapOrderFromDB); localSet(local);
   return data.map(mapOrderFromDB);
 }

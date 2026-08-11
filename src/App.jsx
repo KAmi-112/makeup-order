@@ -107,9 +107,16 @@ function MobileBottomBar() {
 
 /* ======== Cloud Status ======== */
 function CloudStatus() {
-  const { state } = useStore();
+  const { state, syncStatus } = useStore();
   if (state.loading) {
-    return <span className="text-[11px] text-warm-800/30 animate-pulse">⏳ 加载中...</span>;
+    return <span className="text-[11px] text-warm-800/30 animate-pulse">正在读取云端订单…</span>;
+  }
+  if (syncStatus?.state === 'error') {
+    return (
+      <button type="button" onClick={() => window.location.reload()} className="text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5">
+        云端读取失败，点此重试
+      </button>
+    );
   }
   return (
     <span className={`text-[11px] flex items-center gap-1.5 ${state.cloudReady ? 'text-emerald-500' : 'text-amber-500'}`}>
