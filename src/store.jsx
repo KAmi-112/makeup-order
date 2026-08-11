@@ -135,6 +135,8 @@ function reducer(state, action) {
       return { ...state, notice: action.payload };
     case 'UPDATE_PRICE_RULES':
       return { ...state, priceRules: action.payload };
+    case 'UPDATE_SPECIAL_DATES':
+      return { ...state, priceRules: { ...state.priceRules, special_dates: action.payload } };
     case 'UPDATE_ANNOUNCEMENTS':
       return { ...state, announcements: action.payload };
     case 'UPDATE_TOP_QUOTES':
@@ -224,9 +226,20 @@ export function StoreProvider({ children }) {
         case 'UPDATE_EXTRA_SERVICE':
         case 'DELETE_EXTRA_SERVICE':
         case 'UPDATE_NOTICE':
-        case 'UPDATE_PRICE_RULES':
-        case 'UPDATE_ANNOUNCEMENTS':
+        case 'UPDATE_SPECIAL_DATES': {
+          setSyncStatus({ state: 'saving', at: null, error: '' });
+          await db.saveSpecialDates(action.payload);
+          setSyncStatus({ state: 'saved', at: new Date(), error: '' });
+          break;
+        }
+        case 'UPDATE_ANNOUNCEMENTS': {
+          setSyncStatus({ state: 'saving', at: null, error: '' });
+          await db.saveAnnouncements(nextState.announcements);
+          setSyncStatus({ state: 'saved', at: new Date(), error: '' });
+          break;
+        }
         case 'UPDATE_TOP_QUOTES':
+        case 'UPDATE_PRICE_RULES':
         case 'UPDATE_BOOKING_RULES':
         case 'UPDATE_MINIAPP_CONFIG':
         case 'UPDATE_REMINDER_TEMPLATES':

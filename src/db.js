@@ -183,6 +183,26 @@ export async function saveSettings(s) {
   if (!data?.updated_at) throw new Error('云端未确认保存，请重新登录后再试');
 }
 
+export async function saveAnnouncements(announcements) {
+  if (!cloudReady) throw new Error('云端服务未配置');
+  const { data, error } = await supabase.rpc('save_admin_announcements', {
+    p_announcements: announcements || [],
+  });
+  if (error) throw error;
+  if (!data) throw new Error('云端未确认公告保存');
+  return data;
+}
+
+export async function saveSpecialDates(specialDates) {
+  if (!cloudReady) throw new Error('云端服务未配置');
+  const { data, error } = await supabase.rpc('save_admin_special_dates', {
+    p_special_dates: specialDates || { enabled: true, dates: [], names: {} },
+  });
+  if (error) throw error;
+  if (!data) throw new Error('云端未确认漫展日保存');
+  return data;
+}
+
 export function subscribeToOrders(cb) {
   if (!cloudReady) return {unsubscribe:()=>{}};
   try{return supabase.channel('o').on('postgres_changes',{event:'*',schema:'public',table:'orders'},p=>{if(p.eventType==='INSERT')cb({type:'ADD',order:mapOrderFromDB(p.new)});else if(p.eventType==='UPDATE')cb({type:'UPDATE',order:mapOrderFromDB(p.new)});else cb({type:'DELETE',id:p.old.id});}).subscribe()}catch{return{unsubscribe:()=>{}}}

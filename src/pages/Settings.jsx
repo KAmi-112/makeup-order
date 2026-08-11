@@ -514,7 +514,7 @@ export default function Settings() {
                     const names = { ...(pr.special_dates.names || {}) };
                     delete names[d];
                     pr.special_dates = { ...pr.special_dates, dates: pr.special_dates.dates.filter(x => x !== d), names };
-                    const saved = await dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                    const saved = await dispatch({ type: 'UPDATE_SPECIAL_DATES', payload: pr.special_dates });
                     showMsg(saved ? `已删除特殊日期 ${d}` : '删除失败，请检查网络后重试', saved ? 'success' : 'error');
                   }} className="text-blue-400 hover:text-red-500 ml-1">×</button>
                 </span>
@@ -538,7 +538,7 @@ export default function Settings() {
               }
               const pr = { ...state.priceRules };
               pr.special_dates = { ...pr.special_dates, dates: [...(pr.special_dates.dates || []), newDate].sort(), names: { ...(pr.special_dates.names || {}), [newDate]: newDateName.trim() } };
-                const saved = await dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                const saved = await dispatch({ type: 'UPDATE_SPECIAL_DATES', payload: pr.special_dates });
                 if (!saved) {
                   showMsg('云端同步失败，请检查登录或网络后重试', 'error');
                   return;
