@@ -189,7 +189,9 @@ export function StoreProvider({ children }) {
 
   // 包装 dispatch：副作用操作（写数据库）
   const dispatchWithCloud = async (action) => {
-    // 先更新本地 state
+    // 先同步计算下一状态，避免 React 尚未完成渲染时把旧设置写回云端。
+    const nextState = reducer(stateRef.current, action);
+    stateRef.current = nextState;
     dispatch(action);
 
     // 异步写云端（不阻塞 UI）
@@ -225,7 +227,7 @@ export function StoreProvider({ children }) {
         case 'UPDATE_REMINDER_TEMPLATES':
         case 'SET_THEME':
         case 'IMPORT_DATA': {
-          setTimeout(() => saveSettingsToCloud(), 50);
+          await saveSettingsToCloud(nextState);
           break;
         }
       }
@@ -235,8 +237,8 @@ export function StoreProvider({ children }) {
   };
 
   // 保存设置到云端（本地模式则存 localStorage）
-  const saveSettingsToCloud = async () => {
-    const s = stateRef.current;
+  const saveSettingsToCloud = async (snapshot = stateRef.current) => {
+    const s = snapshot;
     try {
       await db.saveSettings({
         makeupTypes: s.makeupTypes,

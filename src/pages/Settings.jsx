@@ -397,7 +397,7 @@ export default function Settings() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-semibold text-warm-800">{rule.label}</span>
-                    <button onClick={() => {
+              <button onClick={async () => {
                       const pr = { ...state.priceRules };
                       pr[rule.key] = { ...pr[rule.key], enabled: !pr[rule.key].enabled };
                       dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
@@ -524,7 +524,7 @@ export default function Settings() {
               value={newDate || ''}
               onChange={e => setNewDate(e.target.value)}
               className="flex-1 px-3 py-2 rounded-xl border border-brand-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-300 transition" />
-            <button onClick={() => {
+            <button onClick={async () => {
               if (!newDate) return;
               if ((state.priceRules?.special_dates?.dates || []).includes(newDate)) {
                 showMsg('该日期已存在', 'error');
@@ -532,9 +532,9 @@ export default function Settings() {
               }
               const pr = { ...state.priceRules };
               pr.special_dates = { ...pr.special_dates, dates: [...(pr.special_dates.dates || []), newDate].sort() };
-              dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
-              setNewDate('');
-              showMsg(`已添加 ${newDate}`);
+                await dispatch({ type: 'UPDATE_PRICE_RULES', payload: pr });
+                setNewDate('');
+                showMsg(`已同步特殊日期 ${newDate}`);
             }}
               className="px-4 py-2 bg-blue-500 text-white text-sm rounded-xl hover:bg-blue-600 transition-colors shrink-0">
               添加日期
@@ -609,12 +609,12 @@ export default function Settings() {
             rows="2" placeholder="输入公告内容..."
             value={newAnnouncement}
             onChange={e => setNewAnnouncement(e.target.value)} />
-          <button onClick={() => {
+          <button onClick={async () => {
             if (!newAnnouncement.trim()) return;
             const arr = [...(state.announcements || []), newAnnouncement.trim()];
-            dispatch({ type: 'UPDATE_ANNOUNCEMENTS', payload: arr });
+            await dispatch({ type: 'UPDATE_ANNOUNCEMENTS', payload: arr });
             setNewAnnouncement('');
-            showMsg('公告已添加');
+            showMsg('公告已同步到小程序');
           }}
             className="px-4 py-2 bg-brand-500 text-white text-sm rounded-xl hover:bg-rose-600 transition-colors shrink-0 self-end">
             添加
