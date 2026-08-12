@@ -189,7 +189,7 @@ export function StoreProvider({ children }) {
             type: 'LOAD_DATA',
             payload: { orders, trashedOrders, ...settings },
           });
-          setSyncStatus({ state: 'synced', at: new Date().toISOString(), error: '' });
+          setSyncStatus({ state: 'synced', at: new Date(), error: '' });
           return;
         } catch (e) {
           lastError = e;

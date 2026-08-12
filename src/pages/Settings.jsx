@@ -235,7 +235,7 @@ export default function Settings() {
       <h2 className="text-xl font-bold text-warm-800">⚙️ 设置</h2>
       <div className={`rounded-xl px-4 py-2.5 text-sm flex items-center justify-between ${syncStatus.state === 'error' ? 'bg-red-50 text-red-700' : syncStatus.state === 'saving' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
         <span>{syncStatus.state === 'saving' ? '正在同步…' : syncStatus.state === 'error' ? '云端同步失败，请重试' : syncStatus.at ? '已同步到云端' : '设置修改后自动同步'}</span>
-        {syncStatus.at && <span className="text-xs opacity-70">{syncStatus.at.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
+        {syncStatus.at && <span className="text-xs opacity-70">{new Date(syncStatus.at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>}
       </div>
 
       {/* Toast */}
