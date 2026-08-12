@@ -4,6 +4,6 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
-  // 开发端使用 localhost 根路径，生产构建使用 GitHub Pages 仓库子路径。
+  // Local development uses the root; GitHub Pages uses the repository path.
   base: command === 'serve' ? '/' : '/makeup-order/',
 }))
