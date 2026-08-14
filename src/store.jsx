@@ -43,6 +43,18 @@ const defaultMiniappConfig = {
   workHoursNote: '非工作时间加位需钞能力',
   warningText: '请认真阅读约妆须知并自觉遵守，不要把家长或异性亲友带来后再询问。',
   maxDaysAhead: 365,
+  portfolioItems: [
+    {
+      id: 'cos-zhengpian-001',
+      title: 'COS正片妆-作品001-粉紫发蓝瞳',
+      category: 'COS正片妆',
+      imageKey: 'cos-zhengpian-001.webp',
+      published: true,
+      consentConfirmed: true,
+      customerId: null,
+      sortOrder: 1,
+    },
+  ],
 };
 
 const defaultReminderTemplates = [
@@ -94,7 +106,13 @@ function reducer(state, action) {
         announcements: action.payload.announcements || state.announcements,
         topQuotes: action.payload.topQuotes?.length ? action.payload.topQuotes : state.topQuotes,
         bookingRules: action.payload.bookingRules || state.bookingRules,
-        miniappConfig: action.payload.miniappConfig || state.miniappConfig,
+        miniappConfig: {
+          ...state.miniappConfig,
+          ...(action.payload.miniappConfig || {}),
+          portfolioItems: action.payload.miniappConfig?.portfolioItems?.length
+            ? action.payload.miniappConfig.portfolioItems
+            : state.miniappConfig.portfolioItems,
+        },
         reminderTemplates: action.payload.reminderTemplates?.length ? action.payload.reminderTemplates : state.reminderTemplates,
         loading: false,
       };
@@ -146,6 +164,8 @@ function reducer(state, action) {
       return { ...state, bookingRules: action.payload };
     case 'UPDATE_MINIAPP_CONFIG':
       return { ...state, miniappConfig: action.payload };
+    case 'UPDATE_PORTFOLIO_ITEMS':
+      return { ...state, miniappConfig: { ...state.miniappConfig, portfolioItems: action.payload } };
     case 'UPDATE_REMINDER_TEMPLATES':
       return { ...state, reminderTemplates: action.payload };
     case 'SET_THEME':
@@ -255,6 +275,7 @@ export function StoreProvider({ children }) {
         case 'UPDATE_PRICE_RULES':
         case 'UPDATE_BOOKING_RULES':
         case 'UPDATE_MINIAPP_CONFIG':
+        case 'UPDATE_PORTFOLIO_ITEMS':
         case 'UPDATE_REMINDER_TEMPLATES':
         case 'SET_THEME':
         case 'IMPORT_DATA': {
