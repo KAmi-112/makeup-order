@@ -47,12 +47,13 @@ const defaultMiniappConfig = {
     {
       id: 'cos-zhengpian-001',
       title: 'COS正片妆-作品001-粉紫发蓝瞳',
-      category: 'COS正片妆',
+      makeupTypeId: '3',
       imageKey: 'cos-zhengpian-001.webp',
       published: true,
       consentConfirmed: true,
       customerId: null,
       sortOrder: 1,
+      shotDate: '',
     },
   ],
 };
