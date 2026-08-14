@@ -36,6 +36,29 @@ export async function signOut() {
   if (supabase) await supabase.auth.signOut();
 }
 
+export async function uploadPortfolioImage(blob) {
+  if (!supabase) throw new Error('云端服务未配置');
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData?.user) throw new Error('请先登录管理员账号');
+  const fileName = `${Date.now()}-${crypto.randomUUID()}.webp`;
+  const path = `${authData.user.id}/${fileName}`;
+  const { error } = await supabase.storage.from('portfolio').upload(path, blob, {
+    contentType: 'image/webp',
+    cacheControl: '31536000',
+    upsert: false,
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from('portfolio').getPublicUrl(path);
+  if (!data?.publicUrl) throw new Error('图片地址生成失败');
+  return { path, publicUrl: data.publicUrl };
+}
+
+export async function deletePortfolioImages(paths = []) {
+  if (!supabase || !paths.length) return;
+  const { error } = await supabase.storage.from('portfolio').remove(paths);
+  if (error) throw error;
+}
+
 export async function getMfaState() {
   if (!supabase) return { currentLevel: 'aal1', nextLevel: 'aal1', factors: [] };
   const [assurance, factorResult] = await Promise.all([
