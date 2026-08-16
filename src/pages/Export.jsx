@@ -1,5 +1,7 @@
 ﻿import { useState, useMemo } from 'react';
+import { useEffect } from 'react';
 import { useStore, statusLabels, paymentLabels } from '../store.jsx';
+import { loadLocalOrderBackgrounds, pickOrderBackground } from '../orderCardBackgrounds.js';
 import { Download, FileText, Copy, CheckCircle2, Printer } from 'lucide-react';
 
 export default function Export() {
@@ -9,6 +11,9 @@ export default function Export() {
   const [dateTo, setDateTo] = useState(now.toISOString().slice(0,10));
   const [statusFilter, setStatusFilter] = useState('all');
   const [copied, setCopied] = useState(false);
+  const [orderBackgrounds, setOrderBackgrounds] = useState([]);
+
+  useEffect(() => { loadLocalOrderBackgrounds().then(setOrderBackgrounds); }, []);
 
   const filtered = useMemo(() => {
     let list = state.orders;
@@ -20,8 +25,10 @@ export default function Export() {
 
   const printCards = () => {
     const sl = statusLabels, pl = paymentLabels;
-    const cards = filtered.map(o => `
-      <div class="card">
+    const cards = filtered.map(o => {
+      const background = pickOrderBackground(orderBackgrounds);
+      return `
+      <div class="card"${background ? ` style="background-image:url('${background.url}')"` : ''}>
         <div class="brand">小荷约妆</div>
         <div class="title">卡片 订单确认卡</div>
         <div class="row"><span>客户</span><strong>${o.customerName}</strong></div>
@@ -33,11 +40,13 @@ export default function Export() {
         <div class="row"><span>状态</span><strong>${sl[o.status]}</strong></div>
         <div class="tips">⚠️ 不允许家长及异性亲友陪同 · 约定时间为开始化妆时间 · 迟到20分钟以上收取迟到费¥10 · 定金放鸽子不退</div>
       </div>
-    `).join('<div class="page-break"></div>');
+    `}).join('<div class="page-break"></div>');
 
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>订单确认卡</title>
 <style>body{font-family:'PingFang SC',sans-serif;color:#333;padding:20px}
-.card{border:2px dashed #ec4899;border-radius:16px;padding:20px;margin-bottom:20px;max-width:400px}
+.card{position:relative;overflow:hidden;border:2px dashed #ec4899;border-radius:16px;padding:20px;margin-bottom:20px;max-width:400px;background-size:cover;background-position:center}
+.card:before{content:'';position:absolute;inset:0;background:rgba(255,252,252,.82);backdrop-filter:blur(1px)}
+.card>*{position:relative;z-index:1}
 .brand{text-align:center;font-size:13px;color:#ec4899;font-weight:700;margin-bottom:4px}
 .title{text-align:center;font-size:18px;font-weight:800;margin-bottom:16px}
 .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #fce7f3;font-size:14px}

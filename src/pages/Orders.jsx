@@ -3,10 +3,11 @@ import { useSearchParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { useRef } from 'react';
 import { useStore, generateId, sources, statusLabels, statusColors, paymentLabels, paymentColors, statuses, paymentStatuses } from '../store.jsx';
+import { loadLocalOrderBackgrounds, pickOrderBackground } from '../orderCardBackgrounds.js';
 import {
   Plus, Search, Filter, X, Edit3, Trash2, ChevronDown,
   Sparkles, Copy, FileDown, MoreHorizontal, CheckCircle2, Eye, Printer, Brush,
-  ArchiveRestore, BadgeCheck, WalletCards, MousePointer2, Tag, MessageSquareText
+  ArchiveRestore, BadgeCheck, WalletCards, MousePointer2, Tag, MessageSquareText, Shuffle
 } from 'lucide-react';
 
 /* ---- 生成可选时间段 ---- */
@@ -345,6 +346,7 @@ export default function Orders() {
   const [showForm, setShowForm] = useState(!!searchParams.get('new'));
   const [editingOrder, setEditingOrder] = useState(null);
   const [viewCardOrder, setViewCardOrder] = useState(null);
+  const [orderBackgrounds, setOrderBackgrounds] = useState([]);
   const [reminderOrder, setReminderOrder] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'all');
@@ -353,6 +355,8 @@ export default function Orders() {
   const [makeupFilter, setMakeupFilter] = useState('all');
   const [sortBy, setSortBy] = useState('smart');
   const [selectedIds, setSelectedIds] = useState(new Set());
+
+  useEffect(() => { loadLocalOrderBackgrounds().then(setOrderBackgrounds); }, []);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const dragSelection = useRef({ active: false, mode: 'add' });
@@ -429,9 +433,13 @@ export default function Orders() {
 
   const printOrderCard = (order) => {
     const sl = statusLabels, pl = paymentLabels, loc = order.location || '小荷工作室';
+    const background = pickOrderBackground(orderBackgrounds);
+    const backgroundCss = background ? `background-image:url("${background.url}");` : '';
     const card = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>订单确认卡</title>
 <style>body{font-family:'PingFang SC',sans-serif;color:#333;display:flex;justify-content:center;padding:20px}
-.card{border:2px dashed #ec4899;border-radius:16px;padding:24px;max-width:400px;width:100%}
+.card{position:relative;overflow:hidden;border:2px dashed #ec4899;border-radius:16px;padding:24px;max-width:400px;width:100%;background-size:cover;background-position:center;${backgroundCss}}
+.card:before{content:'';position:absolute;inset:0;background:rgba(255,252,252,.82);backdrop-filter:blur(1px)}
+.card>*{position:relative;z-index:1}
 .brand{text-align:center;color:#ec4899;font-weight:700;font-size:13px;margin-bottom:4px}
 .title{text-align:center;font-size:20px;font-weight:800;margin-bottom:20px}
 .row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #fce7f3;font-size:15px}
@@ -921,7 +929,7 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
       )}
 
       {/* Confirmation Card Modal */}
-      {viewCardOrder && <OrderConfirmCard order={viewCardOrder} onClose={() => setViewCardOrder(null)} />}
+      {viewCardOrder && <OrderConfirmCard order={viewCardOrder} backgrounds={orderBackgrounds} onClose={() => setViewCardOrder(null)} />}
       {reminderOrder && <div className="fixed inset-0 z-50 grid place-items-center p-4">
         <button aria-label="关闭" onClick={() => setReminderOrder(null)} className="absolute inset-0 bg-black/35 backdrop-blur-sm" />
         <div className="relative bg-white rounded-3xl shadow-2xl border border-brand-100 w-full max-w-lg p-5">
@@ -934,13 +942,18 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
 }
 
 /* ---- Order Confirm Card ---- */
-function OrderConfirmCard({ order, onClose }) {
+function OrderConfirmCard({ order, backgrounds, onClose }) {
   const { state } = useStore();
   const confirmedServices = state.extraServices.filter(s =>
     (order.extraServices || []).includes(s.id)
   );
   const basePrice = order.price - confirmedServices.reduce((s, svc) => s + svc.price, 0);
   const [copied, setCopied] = useState(false);
+  const [background, setBackground] = useState(() => pickOrderBackground(backgrounds));
+
+  useEffect(() => {
+    if (!background && backgrounds.length) setBackground(pickOrderBackground(backgrounds));
+  }, [background, backgrounds]);
 
   const cardText = [
     '【妆造订单确认】💄',
@@ -992,6 +1005,7 @@ function OrderConfirmCard({ order, onClose }) {
               }`}>
               {copied ? <><CheckCircle2 className="w-3.5 h-3.5" /> 已复制</> : <><Copy className="w-3.5 h-3.5" /> 复制文本</>}
             </button>
+            {!!backgrounds.length && <button title="换一个背景" onClick={() => setBackground(pickOrderBackground(backgrounds, background?.url))} className="p-1.5 rounded-lg text-brand-500 hover:bg-brand-50 transition-colors"><Shuffle className="w-4 h-4" /></button>}
             <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
               <X className="w-4 h-4 text-gray-400" />
             </button>
@@ -1000,7 +1014,9 @@ function OrderConfirmCard({ order, onClose }) {
 
         {/* Card Preview */}
         <div className="overflow-y-auto p-5 flex-1">
-          <div className="bg-gradient-to-br from-rose-50 via-white to-amber-50 rounded-2xl border-2 border-brand-100 p-5 shadow-inner">
+          <div className="relative overflow-hidden bg-gradient-to-br from-rose-50 via-white to-amber-50 rounded-2xl border-2 border-brand-100 p-5 shadow-inner bg-cover bg-center" style={background ? { backgroundImage: `url("${background.url}")` } : undefined}>
+            {background && <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px]" />}
+            <div className="relative z-10">
             {/* Brand */}
             <div className="text-center mb-4">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400 to-brand-600 flex items-center justify-center mx-auto mb-2 shadow-md">
@@ -1093,6 +1109,7 @@ function OrderConfirmCard({ order, onClose }) {
                 · 默认可拍妆面图，可以不发不能不拍<br/>
                 · 定金放鸽子不退，妆后面结
               </p>
+            </div>
             </div>
           </div>
         </div>
