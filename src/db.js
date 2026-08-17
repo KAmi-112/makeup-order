@@ -156,6 +156,42 @@ export async function fetchAuditLogs(limit = 200) {
   return data.map(row => ({ id: row.id, orderId: row.order_id, action: row.action, actorId: row.actor_id, createdAt: row.created_at }));
 }
 
+export async function fetchDiscountCards() {
+  if (!cloudReady) return localGet()?.discountCards ?? [];
+  const { data, error } = await supabase
+    .from('discount_cards')
+    .select('id,card_code,customer_name,makeup_type_id,makeup_type_name,total_uses,original_unit_price,purchase_amount,status,issued_at,refunded_at,refund_amount,refund_reason,notes,discount_card_redemptions(id,order_id,status,covered_amount,reserved_at,redeemed_at,released_at)')
+    .order('issued_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapDiscountCardFromDB);
+}
+
+export async function issueDiscountCard(payload) {
+  if (!cloudReady) throw new Error('优惠卡必须连接云端后创建');
+  const { data, error } = await supabase.rpc('admin_issue_discount_card', {
+    p_customer_name: payload.customerName,
+    p_makeup_type_id: payload.makeupTypeId,
+    p_makeup_type_name: payload.makeupTypeName,
+    p_original_unit_price: payload.originalUnitPrice,
+    p_purchase_amount: payload.purchaseAmount,
+    p_pin: payload.pin,
+    p_notes: payload.notes || '',
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function refundDiscountCard(cardId, reason, merchantFault = false) {
+  if (!cloudReady) throw new Error('优惠卡退款必须连接云端处理');
+  const { data, error } = await supabase.rpc('admin_refund_discount_card', {
+    p_card_id: cardId,
+    p_reason: reason || '',
+    p_merchant_fault: merchantFault,
+  });
+  if (error) throw error;
+  return data;
+}
+
 export async function addOrder(order) {
   if (!cloudReady) { const l=localGet()||{orders:[]}; l.orders.push(order); localSet(l); return order; }
   const { data, error } = await supabase.from('orders').insert(mapOrderToDB(order)).select().single();
@@ -232,6 +268,7 @@ export function subscribeToOrders(cb) {
   try{return supabase.channel('o').on('postgres_changes',{event:'*',schema:'public',table:'orders'},p=>{if(p.eventType==='INSERT')cb({type:'ADD',order:mapOrderFromDB(p.new)});else if(p.eventType==='UPDATE')cb({type:'UPDATE',order:mapOrderFromDB(p.new)});else cb({type:'DELETE',id:p.old.id});}).subscribe()}catch{return{unsubscribe:()=>{}}}
 }
 
-function mapOrderToDB(o){return{id:o.id,customer_name:o.customerName,customer_phone:o.customerPhone||'',customer_wechat:o.customerWechat||'',date:o.date,time:o.time,duration:o.duration,location:o.location||'',makeup_type:o.makeupType,price:o.price,deposit:o.deposit||0,source:o.source,status:o.status,payment_status:o.paymentStatus,notes:o.notes||'',extra_services:o.extraServices||[],tags:o.tags||[],created_at:o.createdAt}}
-function mapOrderFromDB(r){return{id:r.id,customerName:r.customer_name,customerPhone:r.customer_phone||'',customerWechat:r.customer_wechat||'',date:r.date,time:r.time,duration:r.duration,location:r.location||'',makeupType:r.makeup_type,price:r.price,deposit:r.deposit||0,source:r.source,status:r.status,paymentStatus:r.payment_status,notes:r.notes||'',extraServices:r.extra_services||[],tags:r.tags||[],createdAt:r.created_at,deletedAt:r.deleted_at||null}}
+function mapOrderToDB(o){return{id:o.id,customer_name:o.customerName,customer_phone:o.customerPhone||'',customer_wechat:o.customerWechat||'',role_name:o.roleName||'',date:o.date,time:o.time,duration:o.duration,location:o.location||'',makeup_type:o.makeupType,price:o.price,deposit:o.deposit||0,source:o.source,status:o.status,payment_status:o.paymentStatus,notes:o.notes||'',extra_services:o.extraServices||[],tags:o.tags||[],created_at:o.createdAt}}
+function mapOrderFromDB(r){return{id:r.id,customerName:r.customer_name,customerPhone:r.customer_phone||'',customerWechat:r.customer_wechat||'',roleName:r.role_name||'',date:r.date,time:r.time,duration:r.duration,location:r.location||'',makeupType:r.makeup_type,price:r.price,deposit:r.deposit||0,source:r.source,status:r.status,paymentStatus:r.payment_status,notes:r.notes||'',extraServices:r.extra_services||[],tags:r.tags||[],createdAt:r.created_at,deletedAt:r.deleted_at||null,discountCardId:r.discount_card_id||null,cardCoveredAmount:Number(r.card_covered_amount)||0}}
+function mapDiscountCardFromDB(r){const rows=r.discount_card_redemptions||[];const used=rows.filter(x=>x.status==='redeemed').length;const reserved=rows.filter(x=>x.status==='reserved').length;return{id:r.id,cardCode:r.card_code,customerName:r.customer_name,makeupTypeId:r.makeup_type_id,makeupTypeName:r.makeup_type_name,totalUses:r.total_uses,originalUnitPrice:Number(r.original_unit_price)||0,purchaseAmount:Number(r.purchase_amount)||0,status:r.status,issuedAt:r.issued_at,refundedAt:r.refunded_at,refundAmount:r.refund_amount==null?null:Number(r.refund_amount),refundReason:r.refund_reason||'',notes:r.notes||'',usedUses:used,reservedUses:reserved,availableUses:Math.max(0,r.total_uses-used-reserved),redemptions:rows};}
 export { cloudReady };

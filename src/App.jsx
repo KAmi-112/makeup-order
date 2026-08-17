@@ -12,13 +12,14 @@ import TrashPage from './pages/Trash.jsx';
 import Conflicts from './pages/Conflicts.jsx';
 import ActivityPage from './pages/Activity.jsx';
 import PortfolioPage from './pages/Portfolio.jsx';
+import DiscountCardsPage from './pages/DiscountCards.jsx';
 import ThemeEngine from './ThemeEngine.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import WaterRippleBackdrop from './components/WaterRippleBackdrop.jsx';
 import { getAuthSession, getMfaState, onAuthStateChange, signOut, verifyMfaCode } from './db.js';
 import {
   LayoutDashboard, ClipboardList, Users, CalendarDays,
-  BarChart3, SettingsIcon, Flower2, Download, ArchiveRestore, AlertTriangle, History, ShieldCheck, Images
+  BarChart3, SettingsIcon, Flower2, Download, ArchiveRestore, AlertTriangle, History, ShieldCheck, Images, CreditCard
 } from 'lucide-react';
 
 const navItems = [
@@ -27,6 +28,7 @@ const navItems = [
   { to: '/conflicts', icon: AlertTriangle, label: '冲突中心', mobileHidden: true },
   { to: '/trash', icon: ArchiveRestore, label: '回收站', desktopOnly: true },
   { to: '/customers', icon: Users, label: '客户' },
+  { to: '/discount-cards', icon: CreditCard, label: '优惠卡' },
   { to: '/portfolio', icon: Images, label: '作品集' },
   { to: '/calendar', icon: CalendarDays, label: '日历' },
   { to: '/statistics', icon: BarChart3, label: '统计', mobileHidden: true },
@@ -255,6 +257,7 @@ function PublicApp() {
         <Route path="/conflicts" element={<Conflicts />} />
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/customers" element={<Customers />} />
+        <Route path="/discount-cards" element={<DiscountCardsPage />} />
         <Route path="/portfolio" element={<PortfolioPage />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/statistics" element={<Statistics />} />

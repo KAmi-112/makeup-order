@@ -32,11 +32,13 @@ export default function Export() {
         <div class="brand">小荷约妆</div>
         <div class="title">卡片 订单确认卡</div>
         <div class="row"><span>客户</span><strong>${o.customerName}</strong></div>
+        ${o.roleName ? '<div class="row"><span>角色</span><strong>'+o.roleName+'</strong></div>' : ''}
         <div class="row"><span>妆造</span><strong>${o.makeupType}</strong></div>
         <div class="row"><span>日期</span><strong>${o.date}</strong></div>
         <div class="row"><span>时间</span><strong>${o.time}（约${o.duration}h）</strong></div>
         <div class="row"><span>总价</span><strong class="price">¥${o.price}</strong></div>
-        ${o.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥' + o.deposit + '</strong></div><div class="row"><span>尾款</span><strong>¥' + (o.price - o.deposit) + '（妆后面结）</strong></div>' : ''}
+        ${o.cardCoveredAmount > 0 ? '<div class="row"><span>优惠卡抵扣</span><strong>-¥'+o.cardCoveredAmount+'</strong></div>' : ''}
+        ${o.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥' + o.deposit + '</strong></div><div class="row"><span>尾款</span><strong>¥' + Math.max(0,o.price-o.deposit-(o.cardCoveredAmount||0)) + '（妆后面结）</strong></div>' : ''}
         <div class="row"><span>状态</span><strong>${sl[o.status]}</strong></div>
         <div class="tips">⚠️ 不允许家长及异性亲友陪同 · 约定时间为开始化妆时间 · 迟到20分钟以上收取迟到费¥10 · 定金放鸽子不退</div>
       </div>
@@ -63,8 +65,8 @@ export default function Export() {
   };
 
   const exportCSV = () => {
-    const headers = ['日期', '时间', '客户', '妆造', '价格', '定金', '状态', '付款', '备注'];
-    const rows = filtered.map(o => [o.date, o.time, o.customerName, o.makeupType, o.price, o.deposit, statusLabels[o.status], paymentLabels[o.paymentStatus], o.notes]);
+    const headers = ['日期', '时间', '客户', '角色', '妆造', '价格', '优惠卡抵扣', '定金', '状态', '付款', '备注'];
+    const rows = filtered.map(o => [o.date, o.time, o.customerName, o.roleName, o.makeupType, o.price, o.cardCoveredAmount || 0, o.deposit, statusLabels[o.status], paymentLabels[o.paymentStatus], o.notes]);
     const csv = [headers, ...rows].map(r => r.map(c => `"${(c ?? '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);

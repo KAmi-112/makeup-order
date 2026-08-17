@@ -51,6 +51,7 @@ function OrderForm({ order, onClose }) {
     customerName: '',
     customerPhone: '',
     customerWechat: '',
+    roleName: '',
     date: new Date().toISOString().slice(0, 10),
     time: '09:00',
     duration: 1,
@@ -166,6 +167,12 @@ function OrderForm({ order, onClose }) {
                 <input className="w-full px-3 py-3 rounded-lg border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-300 transition"
                   value={form.customerWechat} onChange={e => setForm(f => ({ ...f, customerWechat: e.target.value }))} placeholder="选填" />
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-warm-800 mb-1.5">角色名称 <span className="font-normal text-warm-800/40">COS预约建议填写</span></label>
+              <input maxLength={80} className="w-full px-3 py-3 rounded-lg border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-300 transition"
+                value={form.roleName || ''} onChange={e => setForm(f => ({ ...f, roleName: e.target.value }))} placeholder="例如：崩坏：星穹铁道·流萤" />
             </div>
 
             {/* Date / Time / Duration */}
@@ -377,6 +384,7 @@ export default function Orders() {
       const q = search.toLowerCase();
       list = list.filter(o =>
         o.customerName?.toLowerCase().includes(q) ||
+        o.roleName?.toLowerCase().includes(q) ||
         o.customerPhone?.includes(q) ||
         o.customerWechat?.toLowerCase().includes(q) ||
         o.makeupType?.toLowerCase().includes(q) ||
@@ -449,12 +457,14 @@ export default function Orders() {
 </style></head><body><div class="card">
 <div class="brand">小荷约妆</div><div class="title">订单确认卡</div>
 <div class="row"><span>客户</span><strong>${order.customerName}</strong></div>
+${order.roleName ? '<div class="row"><span>角色</span><strong>'+order.roleName+'</strong></div>' : ''}
 <div class="row"><span>妆造</span><strong>${order.makeupType}</strong></div>
 <div class="row"><span>日期</span><strong>${order.date}</strong></div>
 <div class="row"><span>时间</span><strong>${order.time}（约${order.duration}h）</strong></div>
 <div class="row"><span>地点</span><strong>${loc}</strong></div>
 <div class="row"><span>总价</span><strong class="price">¥${order.price}</strong></div>
-${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.deposit+'</strong></div><div class="row"><span>尾款</span><strong>¥'+(order.price-order.deposit)+'（妆后面结）</strong></div>' : ''}
+${order.cardCoveredAmount > 0 ? '<div class="row"><span>优惠卡抵扣</span><strong>-¥'+order.cardCoveredAmount+'</strong></div>' : ''}
+${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.deposit+'</strong></div><div class="row"><span>尾款</span><strong>¥'+Math.max(0,order.price-order.deposit-(order.cardCoveredAmount||0))+'（妆后面结）</strong></div>' : ''}
 <div class="row"><span>状态</span><strong>${sl[order.status]}</strong></div>
 <div class="tips">⚠️ 不允许家长及异性亲友陪同 · 约定时间为开始化妆时间 · 迟到20分钟以上收取迟到费¥10 · 定金放鸽子不退，妆后面结</div>
 </div></body></html>`;
@@ -959,6 +969,7 @@ function OrderConfirmCard({ order, backgrounds, onClose }) {
     '【妆造订单确认】💄',
     '',
     `👤 客户：${order.customerName}`,
+    order.roleName ? `🎭 角色：${order.roleName}` : '',
     order.customerPhone ? `📱 手机：${order.customerPhone}` : '',
     order.customerWechat ? `💬 微信：${order.customerWechat}` : '',
     '',
@@ -971,8 +982,9 @@ function OrderConfirmCard({ order, backgrounds, onClose }) {
     ...confirmedServices.map(s => `   + ${s.name}：¥${s.price}`),
     `   ──────────────`,
     `   合计：¥${order.price}`,
+    order.cardCoveredAmount > 0 ? `💳 优惠卡抵扣：-¥${order.cardCoveredAmount}` : '',
     order.deposit > 0 ? `定金：¥${order.deposit}` : '',
-    order.deposit > 0 ? `🧾 尾款：¥${order.price - order.deposit}（妆后面结）` : '',
+    order.deposit > 0 ? `🧾 尾款：¥${Math.max(0, order.price - order.deposit - (order.cardCoveredAmount || 0))}（妆后面结）` : '',
     '',
     order.notes ? `📝 备注：${order.notes}` : '',
     '',
@@ -1035,6 +1047,7 @@ function OrderConfirmCard({ order, backgrounds, onClose }) {
             {/* Customer */}
             <div className="text-center mb-4">
               <p className="text-lg font-bold text-warm-800">{order.customerName}</p>
+              {order.roleName && <p className="text-sm text-[#b9637b] mt-1">角色：{order.roleName}</p>}
               <p className="text-xs text-warm-800/40">{order.makeupType}</p>
             </div>
 
@@ -1072,6 +1085,7 @@ function OrderConfirmCard({ order, backgrounds, onClose }) {
                 <span className="font-semibold text-warm-800">合计</span>
                 <span className="text-lg font-extrabold text-brand-600">¥{order.price}</span>
               </div>
+              {order.cardCoveredAmount > 0 && <div className="flex justify-between text-sm mt-2 text-emerald-700"><span>优惠卡抵扣</span><span>-¥{order.cardCoveredAmount}</span></div>}
             </div>
 
             {/* Deposit */}
@@ -1082,7 +1096,7 @@ function OrderConfirmCard({ order, backgrounds, onClose }) {
                   <p className="text-amber-500">已付定金</p>
                 </div>
                 <div className="flex-1 bg-gray-50 rounded-xl p-2.5 text-center">
-                  <p className="text-gray-600 font-bold text-base">¥{order.price - order.deposit}</p>
+                  <p className="text-gray-600 font-bold text-base">¥{Math.max(0, order.price - order.deposit - (order.cardCoveredAmount || 0))}</p>
                   <p className="text-gray-400">妆后面结</p>
                 </div>
               </div>
