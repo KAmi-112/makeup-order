@@ -271,8 +271,13 @@ function PublicApp() {
 }
 
 export default function App() {
+  // 构建产物既用于 GitHub Pages，也会在 localhost 根路径预览。
+  // 不能直接使用构建期 BASE_URL，否则本地预览会把 basename 设为 /makeup-order/ 而白屏。
+  const routerBase = window.location.pathname === '/makeup-order' || window.location.pathname.startsWith('/makeup-order/')
+    ? '/makeup-order'
+    : '/';
   return (
-    <BrowserRouter basename={import.meta.env.BASE_URL}>
+    <BrowserRouter basename={routerBase}>
       <WaterRippleBackdrop />
       <PublicApp />
     </BrowserRouter>

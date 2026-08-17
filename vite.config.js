@@ -39,6 +39,6 @@ function localOrderBackgrounds() {
 
 export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss(), localOrderBackgrounds()],
-  // Local development uses the root; GitHub Pages uses the repository path.
-  base: command === 'serve' ? '/' : '/makeup-order/',
+  // 构建资源使用相对路径：同一份 dist 才能同时在 localhost 根路径和 GitHub Pages 子路径打开。
+  base: command === 'serve' ? '/' : './',
 }))
