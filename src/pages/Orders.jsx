@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useRef } from 'react';
 import { useStore, generateId, sources, statusLabels, statusColors, paymentLabels, paymentColors, statuses, paymentStatuses } from '../store.jsx';
 import { loadLocalOrderBackgrounds, pickOrderBackground } from '../orderCardBackgrounds.js';
+import { markCardOrderNoShow } from '../db.js';
 import {
   Plus, Search, Filter, X, Edit3, Trash2, ChevronDown,
   Sparkles, Copy, FileDown, MoreHorizontal, CheckCircle2, Eye, Printer, Brush,
@@ -474,8 +475,8 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
     setTimeout(() => win.print(), 400);
   };
 
-  const handleStatusChange = (order, newStatus) => {
-    const labels = { confirmed: '确认这笔预约？', rejected: '确定拒绝？', completed: '标记为已完成？', pending: '撤回到待确认？' };
+  const handleStatusChange = async (order, newStatus) => {
+    const labels = { confirmed: '确认这笔预约？', rejected: '确定拒绝？', completed: '标记为已完成？', pending: '撤回到待确认？', no_show: '确认客妹爽约？优惠卡不会扣次数，但会登记爽约费。' };
     if (labels[newStatus] && !window.confirm(labels[newStatus])) return;
 
     // 确认前检查时间冲突
@@ -491,6 +492,13 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
       }
     }
 
+    if (newStatus === 'no_show' && order.discountCardId) {
+      try {
+        const result = await markCardOrderNoShow(order.id);
+        dispatch({ type: 'UPDATE_ORDER', payload: { ...order, status: 'no_show', noShowFee: Number(result.fee || 0), noShowFeePaid: false } });
+      } catch (error) { window.alert(error.message || '爽约处理失败'); }
+      return;
+    }
     dispatch({ type: 'UPDATE_ORDER', payload: { ...order, status: newStatus } });
   };
 
@@ -815,7 +823,7 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
                           <button onClick={() => handleStatusChange(o, 'confirmed')} className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200" title="确认">✓</button>
                         )}
                         {o.status === 'confirmed' && (
-                          <button onClick={() => handleStatusChange(o, 'completed')} className="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-600 rounded-full hover:bg-emerald-200" title="完成">✓</button>
+                          <><button onClick={() => handleStatusChange(o, 'completed')} className="text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-600 rounded-full hover:bg-emerald-200" title="完成">✓</button><button onClick={() => handleStatusChange(o, 'no_show')} className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full" title="爽约">爽约</button></>
                         )}
                       </div>
                     </td>
@@ -899,7 +907,7 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
                   <button onClick={() => handleStatusChange(o, 'confirmed')} className="flex-1 py-2.5 text-sm font-bold bg-blue-500 text-white rounded-xl active:bg-blue-600">确认预约</button>
                   <button onClick={() => handleStatusChange(o, 'rejected')} className="flex-1 py-2.5 text-sm font-bold bg-red-500 text-white rounded-xl active:bg-red-600">拒绝</button>
                 </>)}
-                {o.status === 'confirmed' && (<button onClick={() => handleStatusChange(o, 'completed')} className="flex-1 py-2.5 text-sm font-bold bg-emerald-500 text-white rounded-xl active:bg-emerald-600">完成化妆</button>)}
+                {o.status === 'confirmed' && (<><button onClick={() => handleStatusChange(o, 'completed')} className="flex-1 py-2.5 text-sm font-bold bg-emerald-500 text-white rounded-xl active:bg-emerald-600">完成化妆</button><button onClick={() => handleStatusChange(o, 'no_show')} className="flex-1 py-2.5 text-sm font-bold bg-amber-500 text-white rounded-xl">标记爽约</button></>)}
                 {(o.status === 'confirmed' || o.status === 'rejected') && (<button onClick={() => handleStatusChange(o, 'pending')} className="flex-1 py-2.5 text-sm font-bold bg-gray-400 text-white rounded-xl active:bg-gray-500">撤回</button>)}
                 <select value={o.paymentStatus} onChange={e => handlePaymentChange(o, e.target.value)} className="flex-1 py-2.5 text-sm font-bold rounded-xl border border-gray-300 bg-white text-center"><option value="unpaid">未付</option><option value="deposit">定金</option><option value="full">全款</option></select>
               </div>

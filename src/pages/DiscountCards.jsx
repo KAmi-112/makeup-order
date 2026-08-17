@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CreditCard, Plus, RefreshCw, Copy, RotateCcw, ShieldCheck, X } from 'lucide-react';
 import { useStore } from '../store.jsx';
-import { fetchDiscountCards, issueDiscountCard, refundDiscountCard } from '../db.js';
+import { fetchDiscountCards, issueDiscountCard, refundDiscountCard, settleCardNoShowFee } from '../db.js';
 
 const money = value => `¥${Number(value || 0).toFixed(2).replace(/\.00$/, '')}`;
 const randomPin = () => String(Math.floor(100000 + Math.random() * 900000));
@@ -61,6 +61,10 @@ export default function DiscountCardsPage() {
     if(!window.confirm(`预计退款 ${money(expected)}，确认将卡片设为已退款？此操作不可直接撤销。`))return;
     try{const result=await refundDiscountCard(card.id,reason,merchantFault);alert(`已登记退款 ${money(result.refundAmount)}`);load();}catch(e){alert(e.message||'退款失败');}
   };
+  const settleFee=async card=>{
+    if(!window.confirm(`确认已收到 ${money(card.outstandingNoShowFee)} 爽约费，并恢复这张卡的使用？`))return;
+    try{await settleCardNoShowFee(card.id);alert('爽约费已结清，优惠卡已恢复使用');load();}catch(e){alert(e.message||'处理失败');}
+  };
   return <div className="max-w-7xl mx-auto space-y-5">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-semibold text-[#355844] flex items-center gap-2"><CreditCard className="w-6 h-6"/>优惠卡</h1><p className="text-sm text-[#7f9185] mt-1">四次长期卡 · 预约预占 · 完妆核销 · 取消释放</p></div><div className="flex gap-2"><button onClick={load} className="p-3 rounded-xl border bg-white"><RefreshCw className={`w-4 h-4 ${loading?'animate-spin':''}`}/></button><button onClick={()=>setIssuing(true)} className="px-4 py-3 rounded-xl bg-[#d97891] text-white flex items-center gap-2"><Plus className="w-4 h-4"/>办理新卡</button></div></div>
     <div className="flex gap-2">{[['active','有效'],['refunded','已退款'],['void','已作废'],['all','全部']].map(([v,l])=><button key={v} onClick={()=>setFilter(v)} className={`px-4 py-2 rounded-full text-sm ${filter===v?'bg-[#4f7d5f] text-white':'bg-white border text-[#66776b]'}`}>{l}</button>)}</div>
@@ -70,6 +74,7 @@ export default function DiscountCardsPage() {
       <div className="flex justify-between gap-3"><div><p className="text-xs text-[#87978c]">{card.cardCode}</p><h3 className="text-lg font-semibold text-[#3d5b49] mt-1">{card.customerName}</h3><p className="text-sm text-[#be667e] mt-1">{card.makeupTypeName}</p></div><span className={`h-fit px-3 py-1 rounded-full text-xs ${card.status==='active'?'bg-emerald-50 text-emerald-700':'bg-gray-100 text-gray-500'}`}>{card.status==='active'?'长期有效':card.status==='refunded'?'已退款':'已作废'}</span></div>
       <div className="grid grid-cols-4 gap-2 mt-5">{Array.from({length:4},(_,i)=>{const done=i<card.usedUses,res=i>=card.usedUses&&i<card.usedUses+card.reservedUses;return <div key={i} className={`h-10 rounded-xl grid place-items-center text-sm font-semibold ${done?'bg-[#4f7d5f] text-white':res?'bg-amber-100 text-amber-700':'bg-[#f2f6f3] text-[#8ba092]'}`}>{done?'已用':res?'预占':i+1}</div>})}</div>
       <div className="mt-4 text-sm space-y-1.5 text-[#66776b]"><p>实收 {money(card.purchaseAmount)} · 单次抵扣 {money(card.originalUnitPrice)}</p><p>已完成 {card.usedUses} 次 · 待完成 {card.reservedUses} 次 · 可预约 {card.availableUses} 次</p></div>
+      {Number(card.outstandingNoShowFee)>0&&<div className="mt-4 rounded-2xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800"><p className="font-semibold">待收爽约费 {money(card.outstandingNoShowFee)}</p><p className="text-xs mt-1">费用结清前，这张卡不能继续预约；爽约没有扣卡次数。</p><button onClick={()=>settleFee(card)} className="mt-3 w-full py-2 rounded-xl bg-amber-600 text-white">已收款，恢复使用</button></div>}
       {card.status==='active'&&<button onClick={()=>refund(card)} className="mt-4 w-full py-2.5 rounded-xl border border-red-100 text-red-600 text-sm flex items-center justify-center gap-2"><RotateCcw className="w-4 h-4"/>办理退卡</button>}
     </article>)}</div>
     {issuing&&<IssueModal makeupTypes={state.makeupTypes} onClose={()=>setIssuing(false)} onDone={result=>{setIssuing(false);setCreated(result);load();}}/>}

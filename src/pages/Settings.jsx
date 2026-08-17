@@ -3,6 +3,7 @@ import { useStore, generateId, themePresets } from '../store.jsx';
 import { useEffect } from 'react';
 import { updateAccountEmail, updateAccountPassword } from '../db.js';
 import MfaSettings from '../components/MfaSettings.jsx';
+import { parseDiscountCardRules } from '../utils/discountCardRules.js';
 import {
   Plus, Edit3, Trash2, X, Check, Download, Upload,
   Sparkles, AlertCircle, ShieldCheck, Copy, MessageCircle,
@@ -77,6 +78,8 @@ export default function Settings() {
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [accountSaving, setAccountSaving] = useState(false);
+  const [ruleText, setRuleText] = useState('优惠卡预约不收定金；爽约不扣次数，收18元爽约费；爽约费未结清时暂停使用优惠卡');
+  const [rulePreview, setRulePreview] = useState(null);
 
   useEffect(() => setQuoteDrafts(state.topQuotes || []), [state.topQuotes]);
   useEffect(() => setBookingDraft(state.bookingRules), [state.bookingRules]);
@@ -98,6 +101,21 @@ export default function Settings() {
   const saveMiniappConfig = () => {
     dispatch({ type: 'UPDATE_MINIAPP_CONFIG', payload: miniappDraft });
     showMsg('小程序基础信息已同步到云端');
+  };
+
+  const previewDiscountCardRules = () => {
+    const parsed = parseDiscountCardRules(ruleText, miniappDraft.discountCardRules);
+    if (!parsed.understood) { showMsg('没有识别到可修改的规则，请换一种说法', 'error'); return; }
+    setRulePreview(parsed);
+  };
+
+  const confirmDiscountCardRules = () => {
+    if (!rulePreview) return;
+    const next = { ...miniappDraft, discountCardRules: rulePreview.rules };
+    setMiniappDraft(next);
+    dispatch({ type: 'UPDATE_MINIAPP_CONFIG', payload: next });
+    setRulePreview(null);
+    showMsg('优惠卡规则已同步到云端');
   };
 
   const saveReminderTemplates = () => {
@@ -260,6 +278,22 @@ export default function Settings() {
         </div>
 
         <ThemePicker />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-brand-100 shadow-sm p-5 space-y-4">
+        <div>
+          <h3 className="font-semibold text-warm-800 flex items-center gap-2"><MessagesSquare className="w-4 h-4 text-rose-400" /> 用一句话修改优惠卡规则</h3>
+          <p className="text-xs text-warm-800/45 mt-1">先解析预览，确认后才会同步，不会直接执行数据库指令。</p>
+        </div>
+        <textarea value={ruleText} onChange={e=>{setRuleText(e.target.value);setRulePreview(null);}} maxLength={300}
+          className="w-full min-h-28 px-4 py-3 rounded-xl border border-brand-200 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-brand-300"
+          placeholder="例如：优惠卡不收定金，爽约费改为18元，欠费时暂停使用" />
+        <button onClick={previewDiscountCardRules} className="px-4 py-2.5 rounded-xl bg-brand-50 text-brand-600 text-sm font-medium">解析并预览</button>
+        {rulePreview && <div className="rounded-2xl bg-[#f4f8f5] border border-[#dce8df] p-4 space-y-3">
+          <p className="text-sm font-medium text-[#3d5b49]">将修改为：</p>
+          <ul className="text-sm text-[#617268] space-y-1">{rulePreview.summary.map(item=><li key={item}>• {item}</li>)}</ul>
+          <div className="flex gap-2"><button onClick={confirmDiscountCardRules} className="px-4 py-2.5 rounded-xl bg-[#4f7d5f] text-white text-sm">确认并同步云端</button><button onClick={()=>setRulePreview(null)} className="px-4 py-2.5 rounded-xl border text-sm">取消</button></div>
+        </div>}
       </div>
 
       {/* ========== 约妆须知 ========== */}

@@ -45,6 +45,13 @@ const defaultMiniappConfig = {
   workHoursNote: '非工作时间加位需钞能力',
   warningText: '请认真阅读约妆须知并自觉遵守，不要把家长或异性亲友带来后再询问。',
   maxDaysAhead: 365,
+  discountCardRules: {
+    depositRequired: false,
+    depositAmount: 0,
+    noShowFee: 18,
+    freezeOnUnpaidNoShow: true,
+    cancelReleasesUse: true,
+  },
   portfolioItems: [
     {
       id: 'cos-zhengpian-001',
@@ -341,14 +348,15 @@ export function generateId() {
 }
 
 export const sources = ['闲鱼', '微信', '小红书', '转介绍', '抖音', '其他'];
-export const statuses = ['pending', 'confirmed', 'completed', 'cancelled', 'rejected'];
-export const statusLabels = { pending: '待确认', confirmed: '已确认', completed: '已完成', cancelled: '已取消', rejected: '已拒绝' };
+export const statuses = ['pending', 'confirmed', 'completed', 'cancelled', 'rejected', 'no_show'];
+export const statusLabels = { pending: '待确认', confirmed: '已确认', completed: '已完成', cancelled: '已取消', rejected: '已拒绝', no_show: '爽约' };
 export const statusColors = {
   pending: 'bg-amber-100 text-amber-700',
   confirmed: 'bg-blue-100 text-blue-700',
   completed: 'bg-emerald-100 text-emerald-700',
   cancelled: 'bg-gray-100 text-gray-500',
   rejected: 'bg-red-100 text-red-600',
+  no_show: 'bg-orange-100 text-orange-700',
 };
 export const paymentStatuses = ['unpaid', 'deposit', 'full', 'refunded'];
 export const paymentLabels = { unpaid: '未付款', deposit: '已付定金', full: '已付全款', refunded: '已退款' };
