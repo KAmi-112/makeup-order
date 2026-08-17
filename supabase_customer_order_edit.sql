@@ -4,7 +4,7 @@ begin;
 
 update public.settings
 set extra_services = coalesce(extra_services,'[]'::jsonb) || jsonb_build_array(
-      jsonb_build_object('id','e6','name','带美瞳（5分钟内免费）','price',0)
+      jsonb_build_object('id','e6','name','带美瞳（五分钟内免费）','price',0)
     ), updated_at=now()
 where id=1 and not exists(
   select 1 from jsonb_array_elements(coalesce(extra_services,'[]'::jsonb)) item where item->>'id'='e6'
