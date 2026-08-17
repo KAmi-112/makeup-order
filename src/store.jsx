@@ -19,6 +19,7 @@ const defaultExtraServices = [
   { id: 'e3', name: '鼻贴（基础贴法）', price: 3 },
   { id: 'e4', name: '加宽超大发网', price: 5 },
   { id: 'e5', name: '全新粉扑（用完包装好带走）', price: 3 },
+  { id: 'e6', name: '带美瞳（5分钟内免费）', price: 0 },
   { id: 'e7', name: '遮眉', price: 3 },
 ];
 
