@@ -214,8 +214,10 @@ export async function addOrder(order) {
 
 export async function updateOrder(order) {
   if (!cloudReady) { const l=localGet()||{orders:[]}; const i=l.orders.findIndex(o=>o.id===order.id); if(i!==-1)l.orders[i]=order; localSet(l); return order; }
-  const { error } = await supabase.from('orders').update(mapOrderToDB(order)).eq('id', order.id);
-  if (error) throw error; return order;
+  const { data, error } = await supabase.from('orders').update(mapOrderToDB(order)).eq('id', order.id).select('id,date,time,duration').single();
+  if (error) throw error;
+  if (!data || data.date !== order.date || data.time !== order.time || Math.abs(Number(data.duration)-Number(order.duration))>.001) throw new Error('云端返回的订单时间与修改值不一致');
+  return order;
 }
 
 export async function deleteOrder(id) {

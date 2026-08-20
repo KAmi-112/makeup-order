@@ -12,31 +12,32 @@ import {
 } from 'lucide-react';
 
 /* ---- 生成可选时间段 ---- */
-function generateTimeSlots(date, duration, orders) {
-  const WORK_START = 7;  // 7:00
-  const WORK_END = 18;   // 18:00
+function generateTimeSlots(date, duration, orders, excludeOrderId, bookingRules) {
+  const available = bookingRules?.availableHours || bookingRules?.workingHours || { start: '05:00', end: '23:00' };
+  const toMinutes = value => { const [hour, minute] = String(value || '00:00').split(':').map(Number); return hour * 60 + (minute || 0); };
+  const format = value => `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(value % 60).padStart(2, '0')}`;
+  const workStart = toMinutes(available.start);
+  const workEnd = toMinutes(available.end);
+  const durationMinutes = Math.max(30, Number(duration || 1) * 60);
   const slots = [];
 
   // 收集当天已占用的时间段
   const bookedRanges = [];
   if (date) {
     orders.forEach(o => {
-      if (o.date === date && o.status !== 'cancelled') {
-        const startH = parseInt(o.time?.split(':')[0]) || 0;
-        const endH = startH + (o.duration || 1);
-        bookedRanges.push({ start: startH, end: endH });
+      if (o.id !== excludeOrderId && o.date === date && !['cancelled', 'rejected', 'no_show'].includes(o.status)) {
+        const start = toMinutes(o.time);
+        const end = start + Number(o.duration || 1) * 60;
+        bookedRanges.push({ start, end });
       }
     });
   }
 
-  // 生成整点时间段
-  const maxStart = WORK_END - Math.ceil(duration || 1);
-  for (let h = WORK_START; h <= maxStart; h++) {
-    const endH = h + Math.ceil(duration || 1);
-    // 检查是否与已预约冲突
-    const booked = bookedRanges.some(r => h < r.end && endH > r.start);
-    const label = `${String(h).padStart(2, '0')}:00 ~ ${String(endH).padStart(2, '0')}:00`;
-    slots.push({ value: `${String(h).padStart(2, '0')}:00`, label, booked });
+  // 与小程序一致，按 30 分钟生成，并支持 05:00～23:00 等云端可约范围。
+  for (let start = workStart; start + durationMinutes <= workEnd; start += 30) {
+    const end = start + durationMinutes;
+    const booked = bookedRanges.some(range => start < range.end && end > range.start);
+    slots.push({ value: format(start), label: `${format(start)} ~ ${format(end)}`, booked });
   }
 
   return slots;
@@ -46,6 +47,8 @@ function generateTimeSlots(date, duration, orders) {
 function OrderForm({ order, onClose }) {
   const { state, dispatch } = useStore();
   const isEdit = !!order;
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const [form, setForm] = useState(order || {
     id: '',
@@ -84,8 +87,13 @@ function OrderForm({ order, onClose }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
+    const normalizedDuration = Number(form.duration);
+    if (!Number.isFinite(normalizedDuration) || normalizedDuration < 0.5 || normalizedDuration > 8) {
+      setSaveError('时长需要填写 0.5～8 小时'); return;
+    }
     const totalPrice = form.price + (form.extraServices || []).reduce((s, sid) => {
       const svc = state.extraServices.find(es => es.id === sid);
       return s + (svc ? svc.price : 0);
@@ -96,7 +104,7 @@ function OrderForm({ order, onClose }) {
       o.date === form.date &&
       o.status !== 'cancelled' &&
       o.status !== 'rejected' &&
-      timeOverlap(form.time, form.duration, o.time, o.duration)
+      timeOverlap(form.time, normalizedDuration, o.time, o.duration)
     );
     if (conflict) {
       const ok = window.confirm(
@@ -107,15 +115,15 @@ function OrderForm({ order, onClose }) {
 
     const data = {
       ...form,
+      duration: normalizedDuration,
       price: totalPrice,
       id: isEdit ? form.id : generateId(),
       createdAt: isEdit ? form.createdAt : new Date().toISOString(),
     };
-    if (isEdit) {
-      dispatch({ type: 'UPDATE_ORDER', payload: data });
-    } else {
-      dispatch({ type: 'ADD_ORDER', payload: data });
-    }
+    setSaving(true); setSaveError('');
+    const ok = await dispatch({ type: isEdit ? 'UPDATE_ORDER' : 'ADD_ORDER', payload: data });
+    setSaving(false);
+    if (!ok) { setSaveError('云端没有保存成功，请重试'); return; }
     onClose();
   };
 
@@ -188,15 +196,15 @@ function OrderForm({ order, onClose }) {
                 <select required className="w-full px-3 py-3 rounded-lg border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-300 transition bg-white"
                   value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))}>
                   <option value="" disabled>选择时间</option>
-                  {generateTimeSlots(form.date, form.duration, state.orders).map(t => (
+                  {generateTimeSlots(form.date, form.duration, state.orders, form.id, state.bookingRules).map(t => (
                     <option key={t.value} value={t.value} disabled={t.booked}>{t.label}</option>
                   ))}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-warm-800 mb-1.5">时长(h)</label>
-                <input type="text" inputMode="decimal" step="0.5" className="w-full px-3 py-3 rounded-lg border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-300 transition"
-                  value={form.duration || ''} onChange={e => { const v = e.target.value.replace(/[^0-9.]/g, ''); setForm(f => ({ ...f, duration: v === '' ? 0.5 : parseFloat(v) || 0.5 })); }} />
+                <input type="number" inputMode="decimal" step="0.5" min="0.5" max="8" className="w-full px-3 py-3 rounded-lg border border-brand-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-brand-300 transition"
+                  value={form.duration} onChange={e => setForm(f => ({ ...f, duration: e.target.value }))} />
               </div>
             </div>
 
@@ -333,9 +341,10 @@ function OrderForm({ order, onClose }) {
               className="px-5 py-2.5 text-sm font-semibold text-warm-800/60 hover:bg-warm-100 rounded-xl">
               取消
             </button>
-            <button type="submit" form="orderForm"
-              className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-brand-200 hover:shadow-xl active:scale-95">
-              {isEdit ? '💾 保存修改' : '✨ 创建订单'}
+            {saveError && <span className="text-xs text-red-600 max-w-48">{saveError}</span>}
+            <button type="submit" form="orderForm" disabled={saving}
+              className="px-6 py-2.5 bg-gradient-to-r from-brand-500 to-brand-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-brand-200 hover:shadow-xl active:scale-95 disabled:opacity-50">
+              {saving ? '正在同步…' : isEdit ? '💾 保存修改' : '✨ 创建订单'}
             </button>
           </div>
         </div>
