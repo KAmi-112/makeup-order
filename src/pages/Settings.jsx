@@ -65,6 +65,7 @@ export default function Settings() {
   // ---- 妆造类型 ----
   const [editingType, setEditingType] = useState(null);
   const [showTypeForm, setShowTypeForm] = useState(false);
+  const [typeSaving, setTypeSaving] = useState(false);
   const [typeForm, setTypeForm] = useState({ name: '', defaultPrice: 168, defaultDuration: 1, emoji: '💄', desc: '' });
   const [newDate, setNewDate] = useState('');
   const [newDateName, setNewDateName] = useState('');
@@ -146,16 +147,18 @@ export default function Settings() {
     finally { setAccountSaving(false); }
   };
 
-  const handleSaveType = () => {
-    if (!typeForm.name.trim()) return;
-    if (editingType) {
-      dispatch({ type: 'UPDATE_MAKEUP_TYPE', payload: { ...editingType, ...typeForm } });
-    } else {
-      dispatch({ type: 'ADD_MAKEUP_TYPE', payload: { ...typeForm, id: generateId() } });
-    }
+  const handleSaveType = async () => {
+    if (!typeForm.name.trim()) { showMsg('请填写妆造名称', 'error'); return; }
+    const duration = Number(typeForm.defaultDuration);
+    if (!Number.isFinite(duration) || duration < 0.5 || duration > 8) { showMsg('时长需要填写 0.5～8 小时', 'error'); return; }
+    setTypeSaving(true);
+    const payload = { ...(editingType || {}), ...typeForm, defaultDuration: duration };
+    const ok = await dispatch({ type: editingType ? 'UPDATE_MAKEUP_TYPE' : 'ADD_MAKEUP_TYPE', payload: editingType ? payload : { ...payload, id: generateId() } });
+    setTypeSaving(false);
+    if (!ok) { showMsg('云端没有保存成功，请检查登录状态后重试', 'error'); return; }
     setShowTypeForm(false); setEditingType(null);
     setTypeForm({ name: '', defaultPrice: 168, defaultDuration: 1, emoji: '💄', desc: '' });
-    showMsg(editingType ? '妆造类型已更新' : '妆造类型已添加');
+    showMsg(editingType ? '时长已同步到网页和小程序' : '妆造类型已添加并同步');
   };
 
   // ---- 额外服务 ----
@@ -747,9 +750,9 @@ export default function Settings() {
             <div className="flex justify-end gap-2 mt-3">
               <button onClick={() => { setShowTypeForm(false); setEditingType(null); }}
                 className="px-3 py-1.5 text-sm text-warm-800/60 hover:bg-white rounded-lg transition-colors">取消</button>
-              <button onClick={handleSaveType}
-                className="px-4 py-1.5 text-sm bg-brand-500 text-white rounded-lg hover:bg-rose-600 transition-colors">
-                {editingType ? '保存' : '添加'}
+              <button onClick={handleSaveType} disabled={typeSaving}
+                className="px-4 py-1.5 text-sm bg-brand-500 text-white rounded-lg hover:bg-rose-600 transition-colors disabled:opacity-50">
+                {typeSaving ? '正在同步…' : editingType ? '保存并同步' : '添加并同步'}
               </button>
             </div>
           </div>

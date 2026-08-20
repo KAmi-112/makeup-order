@@ -268,7 +268,12 @@ export function StoreProvider({ children }) {
         case 'ADD_EXTRA_SERVICE':
         case 'UPDATE_EXTRA_SERVICE':
         case 'DELETE_EXTRA_SERVICE':
-        case 'UPDATE_NOTICE':
+        case 'UPDATE_NOTICE': {
+          setSyncStatus({ state: 'saving', at: null, error: '' });
+          await saveSettingsToCloud(nextState);
+          setSyncStatus({ state: 'saved', at: new Date(), error: '' });
+          break;
+        }
         case 'UPDATE_SPECIAL_DATES': {
           setSyncStatus({ state: 'saving', at: null, error: '' });
           await db.saveSpecialDates(action.payload);

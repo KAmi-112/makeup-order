@@ -251,10 +251,21 @@ export async function fetchSettings() {
 export async function saveSettings(s) {
   if (!cloudReady) { const l=localGet()||{}; Object.assign(l,s); localSet(l); return; }
   // 标准化字段：确保 price/duration 同步到 Supabase
-  const types = (s.makeupTypes || []).map(t => ({...t, price: t.defaultPrice ?? t.price ?? 0, duration: t.defaultDuration ?? t.duration ?? 1}));
-  const { data, error } = await supabase.from('settings').update({makeup_types:types,extra_services:s.extraServices,notice:s.notice,theme:s.theme,price_rules:s.priceRules,announcements:s.announcements,top_quotes:s.topQuotes,booking_rules:s.bookingRules,miniapp_config:s.miniappConfig,reminder_templates:s.reminderTemplates,updated_at:new Date().toISOString()}).eq('id',1).select('updated_at').single();
+  const types = (s.makeupTypes || []).map(t => {
+    const price = Number(t.defaultPrice ?? t.price ?? 0);
+    const duration = Number(t.defaultDuration ?? t.duration ?? 1);
+    return {...t, price, defaultPrice:price, duration, defaultDuration:duration};
+  });
+  const { data, error } = await supabase.from('settings').update({makeup_types:types,extra_services:s.extraServices,notice:s.notice,theme:s.theme,price_rules:s.priceRules,announcements:s.announcements,top_quotes:s.topQuotes,booking_rules:s.bookingRules,miniapp_config:s.miniappConfig,reminder_templates:s.reminderTemplates,updated_at:new Date().toISOString()}).eq('id',1).select('updated_at,makeup_types').single();
   if (error) throw error;
   if (!data?.updated_at) throw new Error('云端未确认保存，请重新登录后再试');
+  const savedTypes = data.makeup_types || [];
+  const durationMismatch = types.some(expected => {
+    const saved = savedTypes.find(item => String(item.id) === String(expected.id));
+    return !saved || Math.abs(Number(saved.duration) - expected.duration) > 0.001;
+  });
+  if (durationMismatch) throw new Error('云端返回的妆造时长与修改值不一致，请重试');
+  return data;
 }
 
 export async function saveAnnouncements(announcements) {
