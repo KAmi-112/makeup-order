@@ -94,9 +94,9 @@ export default function Settings() {
     showMsg('顶部轮播语句已保存');
   };
 
-  const saveBookingRules = () => {
-    dispatch({ type: 'UPDATE_BOOKING_RULES', payload: bookingDraft });
-    showMsg('接单日期与时间规则已保存');
+  const saveBookingRules = async () => {
+    const saved = await dispatch({ type: 'UPDATE_BOOKING_RULES', payload: bookingDraft });
+    showMsg(saved ? '接单日期与时间规则已保存并同步到小程序' : '保存失败，请检查网络后重试');
   };
 
   const saveMiniappConfig = () => {
@@ -489,7 +489,8 @@ export default function Settings() {
             <input type="time" value={bookingDraft?.workingHours?.end || '18:00'} onChange={e => setBookingDraft(r => ({ ...r, workingHours: { ...r.workingHours, end: e.target.value } }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-brand-200 bg-white" />
           </label>
           <label className="text-xs text-warm-800/55">订单间隔（分钟）
-            <input type="number" min="0" max="180" step="15" value={bookingDraft?.bufferMinutes ?? 30} onChange={e => setBookingDraft(r => ({ ...r, bufferMinutes: Number(e.target.value) }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-brand-200 bg-white" />
+            <input type="number" min="0" max="180" step="15" value={bookingDraft?.bufferMinutes ?? 0} onChange={e => setBookingDraft(r => ({ ...r, bufferMinutes: Number(e.target.value) }))} className="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-brand-200 bg-white" />
+            <span className="block mt-1 text-[11px] text-warm-800/40">设为 0 时，相邻订单可以首尾衔接。</span>
           </label>
         </div>
         <div className="grid md:grid-cols-2 gap-3 mb-4 rounded-xl bg-[#fff8f4] border border-[#f2ded2] p-3">

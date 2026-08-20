@@ -34,7 +34,7 @@ const defaultBookingRules = {
   blockedDates: [],
   workingHours: { start: '07:00', end: '18:00' },
   availableHours: { start: '05:00', end: '23:00' },
-  bufferMinutes: 30,
+  bufferMinutes: 0,
 };
 
 const defaultMiniappConfig = {
