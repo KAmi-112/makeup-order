@@ -170,6 +170,14 @@ ${monthOrders.map(o => {
     }, 0),
   [state.orders, year, month]);
 
+  // 本月预期收入：有效订单的总价，不含已取消、已拒绝订单
+  const monthExpectedIncome = useMemo(() =>
+    state.orders.filter(o => {
+      const d = new Date(`${o.date}T00:00:00`);
+      return d.getMonth() === month && d.getFullYear() === year && !['cancelled', 'rejected'].includes(o.status);
+    }).reduce((sum, o) => sum + (Number(o.price) || 0), 0),
+  [state.orders, year, month]);
+
   const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
 
   // 月历格子
@@ -215,7 +223,8 @@ ${monthOrders.map(o => {
       {/* Stats */}
       <div className="flex items-center gap-4 text-sm">
         <span className="text-warm-800/60 inline-flex items-center gap-1.5"><BarChart3 className="w-4 h-4 text-[#6f927a]" />当月 <strong className="text-warm-800">{state.orders.filter(o => {const d=new Date(o.date);return d.getMonth()===month&&d.getFullYear()===year;}).length}</strong> 单</span>
-        <span className="text-warm-800/60 inline-flex items-center gap-1.5"><Banknote className="w-4 h-4 text-brand-500" />收入 <strong className="text-brand-600">¥{monthIncome.toLocaleString()}</strong></span>
+        <span className="text-warm-800/60 inline-flex items-center gap-1.5"><Banknote className="w-4 h-4 text-brand-500" />本月已收 <strong className="text-brand-600">¥{monthIncome.toLocaleString()}</strong></span>
+        <span className="text-warm-800/60 inline-flex items-center gap-1.5"><CircleDollarSign className="w-4 h-4 text-[#6f927a]" />本月预期收入 <strong className="text-[#52745e]">¥{monthExpectedIncome.toLocaleString()}</strong></span>
       </div>
 
       {/* 选中日期后首屏可见的每日摘要 */}
