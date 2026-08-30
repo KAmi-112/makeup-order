@@ -1,10 +1,11 @@
 ﻿import { useState, useMemo } from 'react';
 import { useStore, statusLabels, statusColors, paymentLabels } from '../store.jsx';
-import { ChevronLeft, ChevronRight, Clock, Download, Printer, Copy, BarChart3, Banknote, CalendarDays } from 'lucide-react';
+import { buildDaySummary, getShanghaiDateString } from '../utils/daySummary.js';
+import { ChevronLeft, ChevronRight, Clock, Download, Printer, Copy, BarChart3, Banknote, CalendarDays, CircleDollarSign, Timer, StickyNote, WalletCards, Sparkles, MapPin, UserRound } from 'lucide-react';
 
 export default function Calendar() {
   const { state } = useStore();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getShanghaiDateString();
   const [selectedDate, setSelectedDate] = useState(today);
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
@@ -22,12 +23,21 @@ export default function Calendar() {
     else setViewMonth(month + 1);
   };
 
-  // 选中日期的订单
-  const dayOrders = useMemo(() =>
+  const allDayOrders = useMemo(() =>
     state.orders
-      .filter(o => o.date === selectedDate && o.status !== 'cancelled')
+      .filter(o => o.date === selectedDate)
       .sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00')),
   [state.orders, selectedDate]);
+
+  const dayOrders = useMemo(() =>
+    allDayOrders.filter(o => !['cancelled', 'rejected'].includes(o.status)),
+  [allDayOrders]);
+
+  const daySummary = useMemo(() =>
+    buildDaySummary(allDayOrders, state.extraServices),
+  [allDayOrders, state.extraServices]);
+
+  const serviceName = id => state.extraServices.find(service => service.id === id)?.name || `未知服务（${id}）`;
 
   // 工作小时 7-18
   const hours = Array.from({ length: 12 }, (_, i) => i + 7);
@@ -208,6 +218,31 @@ ${monthOrders.map(o => {
         <span className="text-warm-800/60 inline-flex items-center gap-1.5"><Banknote className="w-4 h-4 text-brand-500" />收入 <strong className="text-brand-600">¥{monthIncome.toLocaleString()}</strong></span>
       </div>
 
+      {/* 选中日期后首屏可见的每日摘要 */}
+      <div className="rounded-2xl border border-brand-100 bg-white/85 shadow-sm p-3 md:p-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="font-bold text-warm-800">{selectedDate}</span>
+            <span className="text-sm text-warm-800/55">有效 <strong className="text-emerald-700">{daySummary.activeCount}</strong> 单</span>
+            <span className="text-sm text-warm-800/55">总额 <strong className="text-brand-600">¥{daySummary.totalAmount}</strong></span>
+            <span className="text-sm text-warm-800/55">已收 <strong className="text-amber-700">¥{daySummary.receivedAmount}</strong></span>
+            <span className="text-sm text-warm-800/55">工时 <strong>{daySummary.totalHours}h</strong></span>
+            <span className="text-sm text-warm-800/55">备注 <strong>{daySummary.noteCount}</strong> 单</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => document.getElementById('daily-order-details')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            className="px-4 py-2 rounded-xl bg-[#eaf5ed] text-[#37694d] text-sm font-semibold hover:bg-[#deeee3] transition-colors"
+          >
+            查看当日完整详情 ↓
+          </button>
+        </div>
+        {daySummary.serviceCounts.length > 0 && <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-brand-50">
+          <span className="text-xs text-warm-800/40 mr-1">附加服务</span>
+          {daySummary.serviceCounts.map(item => <span key={item.name} className="px-2 py-1 rounded-full bg-[#edf7f0] text-[#46745a] text-[11px]">{item.name} × {item.count}</span>)}
+        </div>}
+      </div>
+
       <div className="grid lg:grid-cols-[280px_1fr] gap-4">
         {/* Left: Mini calendar */}
         <div className="bg-white rounded-2xl border border-brand-100 shadow-sm">
@@ -290,6 +325,73 @@ ${monthOrders.map(o => {
           </div>
         </div>
       </div>
+
+      {/* Daily overview */}
+      <section id="daily-order-details" className="panel-luxe rounded-3xl p-4 md:p-5 space-y-4 scroll-mt-4">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-[11px] tracking-[.18em] text-brand-500 font-semibold">DAILY OVERVIEW</p>
+            <h3 className="font-bold text-warm-800 mt-1">{selectedDate} 每日经营概览</h3>
+          </div>
+          {daySummary.cancelledCount > 0 && <span className="text-xs text-warm-800/45">另有 {daySummary.cancelledCount} 笔已取消/拒绝订单</span>}
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { icon: CalendarDays, label: '有效订单', value: `${daySummary.activeCount} 单`, color: 'text-emerald-700', bg: 'bg-emerald-50' },
+            { icon: CircleDollarSign, label: '订单总额', value: `¥${daySummary.totalAmount}`, color: 'text-rose-700', bg: 'bg-rose-50' },
+            { icon: Banknote, label: '当日已收', value: `¥${daySummary.receivedAmount}`, color: 'text-amber-700', bg: 'bg-amber-50' },
+            { icon: Timer, label: '预计工时', value: `${daySummary.totalHours} 小时`, color: 'text-sky-700', bg: 'bg-sky-50' },
+          ].map(({ icon: Icon, label, value, color, bg }) => (
+            <div key={label} className="rounded-2xl border border-white/80 bg-white/75 p-3.5 shadow-sm flex items-center gap-3">
+              <span className={`w-10 h-10 rounded-xl ${bg} ${color} flex items-center justify-center`}><Icon className="w-5 h-5" /></span>
+              <div><p className="text-xs text-warm-800/45">{label}</p><p className="font-bold text-warm-800 mt-0.5">{value}</p></div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-3">
+          <div className="rounded-2xl bg-white/70 border border-brand-100 p-4 md:col-span-2">
+            <p className="text-sm font-semibold text-warm-800 flex items-center gap-2"><Sparkles className="w-4 h-4 text-brand-500" />附加服务统计</p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {daySummary.serviceCounts.length > 0 ? daySummary.serviceCounts.map(item => <span key={item.name} className="px-3 py-1.5 rounded-full bg-[#edf7f0] text-[#46745a] text-xs">{item.name} × {item.count}</span>) : <span className="text-xs text-warm-800/35">当天没有附加服务</span>}
+            </div>
+          </div>
+          <div className="rounded-2xl bg-white/70 border border-brand-100 p-4 grid grid-cols-2 gap-3">
+            <div><StickyNote className="w-4 h-4 text-amber-500" /><p className="text-xl font-bold mt-2">{daySummary.noteCount}</p><p className="text-xs text-warm-800/45">有备注订单</p></div>
+            <div><WalletCards className="w-4 h-4 text-emerald-600" /><p className="text-xl font-bold mt-2">{daySummary.cardCount}</p><p className="text-xs text-warm-800/45">优惠卡订单</p></div>
+          </div>
+        </div>
+      </section>
+
+      {/* Daily order cards */}
+      <section className="space-y-3">
+        <div className="flex items-center justify-between"><h3 className="font-bold text-warm-800">当日订单详情</h3><span className="text-xs text-warm-800/40">按预约时间排序</span></div>
+        {allDayOrders.length === 0 ? <div className="panel-luxe rounded-2xl py-10 text-center text-sm text-warm-800/35">当天暂无订单</div> : (
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {allDayOrders.map(order => (
+              <article key={order.id} className={`rounded-2xl border p-4 shadow-sm ${['cancelled','rejected'].includes(order.status) ? 'bg-gray-50 border-gray-200 opacity-65' : 'bg-white border-brand-100'}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div><p className="text-xs text-brand-500 font-semibold">{order.time || '--:--'} · {order.duration || 0}h</p><h4 className="font-bold text-warm-800 mt-1">{order.makeupType}</h4>{order.roleName && <p className="text-xs text-[#b9637b] mt-1">角色：{order.roleName}</p>}</div>
+                  <span className={`px-2.5 py-1 rounded-full text-[11px] ${statusColors[order.status] || 'bg-gray-100 text-gray-500'}`}>{statusLabels[order.status] || order.status}</span>
+                </div>
+                <div className="mt-3 space-y-2 text-sm">
+                  <p className="flex items-center gap-2 text-warm-800"><UserRound className="w-4 h-4 text-warm-800/35" />{order.customerName || '未填写客户'}</p>
+                  <p className="flex items-start gap-2 text-warm-800/60"><MapPin className="w-4 h-4 mt-0.5 shrink-0 text-warm-800/30" /><span>{order.location || '未填写地点'}</span></p>
+                  {(order.extraServices || []).length > 0 && <div className="flex flex-wrap gap-1.5">{order.extraServices.map(id => <span key={id} className="px-2 py-1 rounded-lg bg-[#edf7f0] text-[#557c63] text-[11px]">{serviceName(id)}</span>)}</div>}
+                  {order.notes && <div className="rounded-xl bg-amber-50/80 px-3 py-2 text-xs text-amber-900"><span className="font-semibold">备注：</span>{order.notes}</div>}
+                </div>
+                <div className="mt-4 pt-3 border-t border-brand-50 grid grid-cols-3 gap-2 text-xs">
+                  <div><p className="text-warm-800/35">总价</p><p className="font-bold text-brand-600 mt-0.5">¥{order.price || 0}</p></div>
+                  <div><p className="text-warm-800/35">已收</p><p className="font-semibold mt-0.5">¥{order.paymentStatus === 'full' ? order.price || 0 : order.paymentStatus === 'deposit' ? order.deposit || 0 : 0}</p></div>
+                  <div><p className="text-warm-800/35">付款</p><p className="font-semibold mt-0.5">{paymentLabels[order.paymentStatus] || order.paymentStatus || '未付款'}</p></div>
+                </div>
+                {Number(order.cardCoveredAmount) > 0 && <p className="mt-2 text-[11px] text-emerald-700">优惠卡抵扣 ¥{order.cardCoveredAmount}</p>}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
