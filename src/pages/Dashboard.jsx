@@ -5,6 +5,8 @@ import { DollarSign, ClipboardList, CalendarDays, Users, Clock, TrendingUp, Spar
 import { useEffect, useState } from 'react';
 import { fetchWeather } from '../utils/weather.js';
 import { getHoliday, upcomingHolidays } from '../utils/holidays.js';
+import { getMonthExpectedRevenue, getOrderReceivedRevenue } from '../utils/revenue.js';
+import { getShanghaiDateString } from '../utils/daySummary.js';
 
 /* ---- 统计卡片 ---- */
 function StatCard({ icon: Icon, title, value, sub, gradient }) {
@@ -54,7 +56,7 @@ export default function Dashboard() {
     const now = new Date();
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
-    const today = now.toISOString().slice(0, 10);
+    const today = getShanghaiDateString();
 
     const monthOrders = state.orders.filter(o => {
       const d = new Date(o.date);
@@ -63,17 +65,12 @@ export default function Dashboard() {
 
     const todayOrders = state.orders.filter(o => o.date === today);
 
-    const monthIncome = monthOrders.reduce((sum, o) => {
-      if (o.status === 'cancelled' || o.status === 'rejected') return sum;
-      if (o.paymentStatus === 'full') return sum + o.price;
-      if (o.paymentStatus === 'deposit') return sum + (o.deposit || 0);
-      if (o.status === 'completed' || o.status === 'confirmed') return sum + o.price;
-      return sum;
-    }, 0);
+    const monthIncome = getOrderReceivedRevenue(monthOrders);
+    const monthExpectedIncome = getMonthExpectedRevenue(state.orders, thisYear, thisMonth);
 
     const pending = state.orders.filter(o => o.status === 'pending' || o.status === 'confirmed').length;
     const customers = new Set(state.orders.map(o => o.customerName).filter(Boolean)).size;
-    return { monthIncome, todayOrders: todayOrders.length, pending, customers };
+    return { monthIncome, monthExpectedIncome, todayOrders: todayOrders.length, pending, customers };
   }, [state.orders]);
 
   const recentOrders = useMemo(() => {
@@ -155,7 +152,7 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={DollarSign} title="本月收入" value={`¥${stats.monthIncome.toLocaleString()}`} gradient="peach" delay={0} />
+        <StatCard icon={DollarSign} title="本月预期收入" value={`¥${stats.monthExpectedIncome.toLocaleString()}`} sub={`已收 ¥${stats.monthIncome.toLocaleString()}`} gradient="peach" delay={0} />
         <StatCard icon={ClipboardList} title="待处理订单" value={stats.pending} sub="需确认/处理" gradient="orange" delay={50} />
         <StatCard icon={CalendarDays} title="今日预约" value={stats.todayOrders} sub="今日排期" gradient="blue" delay={100} />
         <StatCard icon={Users} title="客户数量" value={stats.customers} sub="去重统计" gradient="rose" delay={150} />

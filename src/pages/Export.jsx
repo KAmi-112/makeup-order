@@ -3,12 +3,14 @@ import { useEffect } from 'react';
 import { useStore, statusLabels, paymentLabels } from '../store.jsx';
 import { loadLocalOrderBackgrounds, pickOrderBackground } from '../orderCardBackgrounds.js';
 import { Download, FileText, Copy, CheckCircle2, Printer } from 'lucide-react';
+import { getOrderExpectedRevenue, getOrderReceivedRevenue } from '../utils/revenue.js';
+import { getShanghaiDateString } from '../utils/daySummary.js';
 
 export default function Export() {
   const { state } = useStore();
   const now = new Date();
   const [dateFrom, setDateFrom] = useState(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`);
-  const [dateTo, setDateTo] = useState(now.toISOString().slice(0,10));
+  const [dateTo, setDateTo] = useState(getShanghaiDateString());
   const [statusFilter, setStatusFilter] = useState('all');
   const [copied, setCopied] = useState(false);
   const [orderBackgrounds, setOrderBackgrounds] = useState([]);
@@ -22,6 +24,11 @@ export default function Export() {
     if (statusFilter !== 'all') list = list.filter(o => o.status === statusFilter);
     return list.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''));
   }, [state.orders, dateFrom, dateTo, statusFilter]);
+
+  const filteredRevenue = useMemo(() => ({
+    expected: getOrderExpectedRevenue(filtered),
+    received: getOrderReceivedRevenue(filtered),
+  }), [filtered]);
 
   const printCards = () => {
     const sl = statusLabels, pl = paymentLabels;
@@ -77,16 +84,10 @@ export default function Export() {
 
   const copyText = () => {
     let text = '🪷 小荷约妆 · 订单导出\n' + '─'.repeat(32) + '\n';
-    let totalIncome = 0;
     let groups = {};
     filtered.forEach(o => {
       if (!groups[o.date]) groups[o.date] = [];
       groups[o.date].push(o);
-      if (o.status !== 'cancelled' && o.status !== 'rejected') {
-        if (o.paymentStatus === 'full') totalIncome += o.price;
-        else if (o.paymentStatus === 'deposit') totalIncome += (o.deposit || 0);
-        else totalIncome += o.price;
-      }
     });
     Object.keys(groups).sort().forEach(date => {
       text += `\n📅 ${date}\n`;
@@ -94,7 +95,7 @@ export default function Export() {
         text += `  ${o.time || '--'} · ${o.makeupType} · ${o.customerName} · ¥${o.price} · [${statusLabels[o.status]}]\n`;
       });
     });
-    text += `\n${'─'.repeat(32)}\n共 ${filtered.length} 单 · 收入 ¥${totalIncome.toLocaleString()}`;
+    text += `\n${'─'.repeat(32)}\n共 ${filtered.length} 单 · 已收 ¥${filteredRevenue.received.toLocaleString()} · 预期收入 ¥${filteredRevenue.expected.toLocaleString()}`;
     navigator.clipboard.writeText(text).then(() => {
       setCopied(true); setTimeout(() => setCopied(false), 2000);
     });
@@ -131,7 +132,7 @@ export default function Export() {
       {/* Results */}
       <div className="bg-white rounded-2xl border border-brand-100 p-5">
         <div className="flex items-center justify-between mb-4">
-          <span className="text-sm text-warm-muted">共 <strong className="text-warm-800">{filtered.length}</strong> 单</span>
+          <span className="text-sm text-warm-muted">共 <strong className="text-warm-800">{filtered.length}</strong> 单 · 已收 <strong className="text-brand-600">¥{filteredRevenue.received.toLocaleString()}</strong> · 预期收入 <strong className="text-[#52745e]">¥{filteredRevenue.expected.toLocaleString()}</strong></span>
           <div className="flex items-center gap-2">
             <button onClick={copyText}
               className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-xl transition-all ${

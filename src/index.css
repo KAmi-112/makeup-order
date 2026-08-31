@@ -46,10 +46,93 @@ body {
 }
 
 .app-shell {
+  position: relative;
+  isolation: isolate;
   background:
-    radial-gradient(circle at 94% 4%, rgba(226, 155, 172, .10), transparent 24%),
-    radial-gradient(circle at 7% 96%, rgba(127, 174, 141, .09), transparent 22%),
-    #fbfcf9;
+    radial-gradient(circle at 82% 4%, rgba(239, 174, 188, .16), transparent 27%),
+    radial-gradient(circle at 9% 90%, rgba(105, 163, 124, .14), transparent 28%),
+    linear-gradient(145deg, #fbfdf9 0%, #fffaf9 52%, #f5faf5 100%);
+}
+
+.lotus-depth-scene {
+  --lotus-x: 0;
+  --lotus-y: 0;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  perspective: 1100px;
+}
+
+.lotus-depth-scene__glow,
+.lotus-depth-scene__leaf,
+.lotus-depth-scene__art {
+  position: absolute;
+  transition: transform .8s cubic-bezier(.2,.8,.2,1);
+  will-change: transform;
+}
+
+.lotus-depth-scene__glow {
+  width: 42vw;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  filter: blur(60px);
+}
+.lotus-depth-scene__glow--rose {
+  right: -13vw;
+  top: -18vw;
+  background: rgba(239, 171, 188, .18);
+  transform: translate3d(calc(var(--lotus-x) * -12px), calc(var(--lotus-y) * -10px), -80px);
+}
+.lotus-depth-scene__glow--jade {
+  left: 8vw;
+  bottom: -27vw;
+  background: rgba(97, 157, 116, .16);
+  transform: translate3d(calc(var(--lotus-x) * 8px), calc(var(--lotus-y) * 7px), -120px);
+}
+
+.lotus-depth-scene__art {
+  right: -3vw;
+  bottom: -9vh;
+  width: min(46vw, 720px);
+  opacity: .12;
+  mix-blend-mode: multiply;
+  filter: saturate(.78) contrast(.92);
+  transform: translate3d(calc(var(--lotus-x) * -18px), calc(var(--lotus-y) * -13px), 20px) rotateY(calc(var(--lotus-x) * -1.8deg));
+}
+
+.lotus-depth-scene__leaf {
+  border-radius: 50% 48% 52% 46%;
+  border: 1px solid rgba(71, 126, 87, .12);
+  background: linear-gradient(145deg, rgba(190, 222, 198, .11), rgba(255,255,255,.03));
+  box-shadow: inset -20px -16px 45px rgba(67, 124, 83, .05), 0 30px 80px rgba(76, 112, 84, .05);
+}
+.lotus-depth-scene__leaf::after {
+  content: '';
+  position: absolute;
+  inset: 50% 8% auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(78, 132, 94, .2), transparent);
+  transform: rotate(-18deg);
+}
+.lotus-depth-scene__leaf--back {
+  width: 31vw;
+  aspect-ratio: 1.7;
+  left: 19vw;
+  top: 8vh;
+  transform: translate3d(calc(var(--lotus-x) * 7px), calc(var(--lotus-y) * 5px), -50px) rotate(-9deg);
+}
+.lotus-depth-scene__leaf--front {
+  width: 38vw;
+  aspect-ratio: 1.9;
+  right: 6vw;
+  bottom: -9vh;
+  transform: translate3d(calc(var(--lotus-x) * -25px), calc(var(--lotus-y) * -16px), 55px) rotate(7deg);
+}
+
+.workspace-content {
+  background: linear-gradient(135deg, rgba(255,255,255,.20), rgba(255,255,255,.05));
 }
 
 .workspace-content > * {
@@ -58,9 +141,23 @@ body {
 }
 
 .panel-luxe {
-  background: rgba(255, 255, 253, .94);
-  border: 1px solid rgba(102, 137, 112, .12);
-  box-shadow: 0 8px 28px rgba(70, 104, 79, .045);
+  background: rgba(255, 255, 253, .82);
+  backdrop-filter: blur(18px) saturate(1.08);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  border: 1px solid rgba(255, 255, 255, .76);
+  box-shadow: 0 18px 55px rgba(59, 101, 72, .075), inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+@media (prefers-reduced-motion: reduce), (pointer: coarse) {
+  .lotus-depth-scene__glow,
+  .lotus-depth-scene__leaf,
+  .lotus-depth-scene__art { transition: none; transform: none; will-change: auto; }
+}
+
+@media (max-width: 1023px) {
+  .lotus-depth-scene__art { width: 86vw; opacity: .085; right: -26vw; }
+  .lotus-depth-scene__leaf--back { width: 62vw; left: -18vw; }
+  .lotus-depth-scene__leaf--front { width: 78vw; right: -30vw; }
 }
 
 /* iOS safe area */

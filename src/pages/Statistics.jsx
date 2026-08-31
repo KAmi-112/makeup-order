@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell, LineChart, Line, Legend,
 } from 'recharts';
 import { TrendingUp, DollarSign, Sparkles } from 'lucide-react';
+import { getMonthExpectedRevenue } from '../utils/revenue.js';
 
 const COLORS = ['#f43f5e', '#fb923c', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa', '#f472b6', '#94a3b8'];
 
@@ -16,6 +17,7 @@ export default function Statistics() {
     const months = Array(12).fill(0).map((_, i) => ({
       month: `${i + 1}月`,
       revenue: 0,
+      expectedRevenue: 0,
       orders: 0,
     }));
 
@@ -31,11 +33,15 @@ export default function Statistics() {
       }
     });
 
+    months.forEach((item, monthIndex) => {
+      item.expectedRevenue = getMonthExpectedRevenue(state.orders, year, monthIndex);
+    });
+
     return months;
   }, [state.orders, year]);
 
   const yearlyTotal = useMemo(() => {
-    return yearlyRevenue.reduce((s, m) => s + m.revenue, 0);
+    return yearlyRevenue.reduce((s, m) => s + m.expectedRevenue, 0);
   }, [yearlyRevenue]);
 
   const sourceStats = useMemo(() => {
@@ -90,7 +96,7 @@ export default function Statistics() {
           <p className="font-medium text-warm-800 mb-1">{label}</p>
           {payload.map((p, i) => (
             <p key={i} style={{ color: p.color }} className="text-xs">
-              {p.name}: {p.name === '收入' ? `¥${p.value.toLocaleString()}` : p.value}
+              {p.name}: {p.name.includes('收入') || p.name === '已收' ? `¥${p.value.toLocaleString()}` : p.value}
             </p>
           ))}
         </div>
@@ -113,7 +119,7 @@ export default function Statistics() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { icon: DollarSign, label: `${year}年总收入`, value: `¥${yearlyTotal.toLocaleString()}`, color: 'from-rose-400 to-brand-600' },
+          { icon: DollarSign, label: `${year}年预期收入`, value: `¥${yearlyTotal.toLocaleString()}`, color: 'from-rose-400 to-brand-600' },
           { icon: Sparkles, label: '客单价（均价）', value: `¥${avgPrice.toLocaleString()}`, color: 'from-amber-400 to-amber-600' },
           { icon: TrendingUp, label: '完成率', value: `${completionRate}%`, color: 'from-emerald-400 to-emerald-600' },
           { icon: DollarSign, label: '总订单数', value: state.orders.filter(o => o.status !== 'cancelled').length, color: 'from-blue-400 to-blue-600' },
@@ -141,8 +147,8 @@ export default function Statistics() {
             <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={{ stroke: '#fce7f3' }} />
             <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={{ stroke: '#fce7f3' }} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="revenue" name="收入" fill="#f43f5e" radius={[8, 8, 0, 0]} />
-            <Bar dataKey="orders" name="订单数" fill="#fda4af" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="expectedRevenue" name="预期收入" fill="#f43f5e" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="revenue" name="已收" fill="#fda4af" radius={[8, 8, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

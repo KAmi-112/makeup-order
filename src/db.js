@@ -244,8 +244,9 @@ export async function permanentlyDeleteOrder(id) {
 export async function fetchSettings() {
   if (!cloudReady) { const l=localGet()||{}; return {makeupTypes:l.makeupTypes??[],extraServices:l.extraServices??[],notice:l.notice??'',theme:l.theme??'lotus',topQuotes:l.topQuotes??[],bookingRules:l.bookingRules??null,miniappConfig:l.miniappConfig??null,reminderTemplates:l.reminderTemplates??[]}; }
   const { data, error } = await supabase.from('settings').select('*').single();
-  if (error) return {makeupTypes:[],extraServices:[],notice:'',theme:'lotus',priceRules:null,announcements:[],topQuotes:[],bookingRules:null,reminderTemplates:[]};
-  if(!data) return {makeupTypes:[],extraServices:[],notice:'',theme:'lotus',priceRules:null,announcements:[],topQuotes:[],bookingRules:null,reminderTemplates:[]};
+  // 云端读取失败必须交给上层显示错误并保留现有状态，不能伪装成空配置。
+  if (error) throw error;
+  if (!data) throw new Error('云端设置不存在');
   const types = (data.makeup_types||[]).map(t => ({...t, defaultPrice: t.price ?? t.defaultPrice ?? 0, defaultDuration: t.duration ?? t.defaultDuration ?? 1}));
   return {makeupTypes:types,extraServices:data.extra_services??[],notice:data.notice??'',theme:data.theme??'lotus',priceRules:data.price_rules??null,announcements:data.announcements??[],topQuotes:data.top_quotes??[],bookingRules:data.booking_rules??null,miniappConfig:data.miniapp_config??null,reminderTemplates:data.reminder_templates??[]};
 }

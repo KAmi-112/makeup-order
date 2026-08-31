@@ -1,6 +1,7 @@
 ﻿import { useState, useMemo, useEffect } from 'react';
 import { useStore, generateId } from '../store.jsx';
 import { fetchWeather } from '../utils/weather.js';
+import { getEffectiveServicePrice, getServicePriceLabel, getPriceAdjustment } from '../utils/pricing.js';
 import {
   Sparkles, Copy, Check, Share2, QrCode, X,
   ShoppingCart, ArrowLeft, Flower2, Drama, Camera, WandSparkles,
@@ -61,28 +62,6 @@ function generateTimeSlots(date, duration, orders, bookingRules) {
   return slots;
 }
 
-function getPriceAdjustment(date, time, rules) {
-  if (!date || !time || !rules) return { amount: 0, label: '' };
-  const current = toMinutes(time);
-  const evening = rules.evening_surcharge || {};
-  if (evening.enabled && current >= toMinutes(evening.startTime || '18:00') && current < toMinutes(evening.endTime || '23:00')) {
-    return { amount: Math.abs(Number(evening.amount || 10)), label: '晚间妆位加价' };
-  }
-  const morningStart = toMinutes('05:00');
-  const morningEnd = toMinutes('07:00');
-  if (current >= morningStart && current < morningEnd) {
-    const day = new Date(`${date}T00:00:00`).getDay();
-    const special = (rules.special_dates?.dates || []).includes(date);
-    if (special || day === 0 || day === 6) {
-      const discount = rules.morning_weekend_special_discount || {};
-      return discount.enabled ? { amount: -Math.abs(Number(discount.amount || -10)), label: special ? '漫展日早间优惠' : '周末早间优惠' } : { amount: 0, label: '' };
-    }
-    const surcharge = rules.morning_weekday_surcharge || {};
-    return surcharge.enabled ? { amount: Math.abs(Number(surcharge.amount || 10)), label: '工作日早间加价' } : { amount: 0, label: '' };
-  }
-  return { amount: 0, label: '' };
-}
-
 export default function Menu() {
   const { state, dispatch } = useStore();
   const [step, setStep] = useState('menu');
@@ -123,7 +102,7 @@ export default function Menu() {
     let p = selectedTypeData?.defaultPrice || 0;
     selectedServices.forEach(sid => {
       const svc = state.extraServices.find(s => s.id === sid);
-      if (svc && !(svc.id === 'e2' && /COS正片|COS华改/.test(selectedType || ''))) p += svc.price;
+      if (svc) p += getEffectiveServicePrice(selectedType, svc);
     });
     return Math.max(0, p + getPriceAdjustment(date, time, state.priceRules).amount);
   }, [selectedTypeData, selectedServices, selectedType, state.extraServices, state.priceRules, date, time]);
@@ -245,7 +224,7 @@ export default function Menu() {
     ];
     if (confirmedServices.length > 0) {
       lines.push('', '📎 附加服务：');
-      confirmedServices.forEach(s => lines.push(`  · ${s.name} ${s.price > 0 ? `¥${s.price}` : '免费'}`));
+      confirmedServices.forEach(s => lines.push(`  · ${s.name} ${getServicePriceLabel(selectedType, s)}`));
     }
     if (notes) lines.push('', `📝 备注：${notes}`);
     lines.push(

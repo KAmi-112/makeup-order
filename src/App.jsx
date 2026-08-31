@@ -16,6 +16,7 @@ import DiscountCardsPage from './pages/DiscountCards.jsx';
 import ThemeEngine from './ThemeEngine.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import WaterRippleBackdrop from './components/WaterRippleBackdrop.jsx';
+import LotusDepthScene from './components/LotusDepthScene.jsx';
 import { getAuthSession, getMfaState, onAuthStateChange, signOut, verifyMfaCode } from './db.js';
 import {
   LayoutDashboard, ClipboardList, Users, CalendarDays,
@@ -144,6 +145,8 @@ function Layout({ children, onLogout }) {
 
   return (
     <div className="app-shell flex h-[100dvh] overflow-hidden">
+      <LotusDepthScene />
+      <div className="relative z-10 flex w-full min-w-0">
       <DesktopSidebar />
 
       {/* Main area */}
@@ -174,6 +177,7 @@ function Layout({ children, onLogout }) {
         </div>
 
         <MobileBottomBar />
+      </div>
       </div>
     </div>
   );

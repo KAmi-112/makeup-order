@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ArchiveRestore, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { useStore } from '../store.jsx';
+import { runSequentialCloudActions } from '../utils/batchCloudActions.js';
 
 export default function TrashPage() {
   const { state, dispatch } = useStore();
@@ -22,15 +23,22 @@ export default function TrashPage() {
     return next;
   });
 
-  const restore = ids => {
-    ids.forEach(id => dispatch({ type: 'RESTORE_ORDER', payload: id }));
-    setSelectedIds(new Set());
+  const finishBatch = (failed, total) => {
+    setSelectedIds(new Set(failed));
+    if (failed.length > 0) {
+      window.alert(`${total - failed.length} 项已成功，${failed.length} 项同步失败并已保留选中，请检查网络后重试。`);
+    }
   };
 
-  const removeForever = ids => {
+  const restore = async ids => {
+    const { failed } = await runSequentialCloudActions(ids, dispatch, id => ({ type: 'RESTORE_ORDER', payload: id }));
+    finishBatch(failed, ids.length);
+  };
+
+  const removeForever = async ids => {
     if (!window.confirm(`将彻底删除 ${ids.length} 个订单？此操作无法恢复。`)) return;
-    ids.forEach(id => dispatch({ type: 'PERMANENT_DELETE_ORDER', payload: id }));
-    setSelectedIds(new Set());
+    const { failed } = await runSequentialCloudActions(ids, dispatch, id => ({ type: 'PERMANENT_DELETE_ORDER', payload: id }));
+    finishBatch(failed, ids.length);
   };
 
   return (

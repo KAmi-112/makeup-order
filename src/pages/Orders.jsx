@@ -5,6 +5,8 @@ import { useRef } from 'react';
 import { useStore, generateId, sources, statusLabels, statusColors, paymentLabels, paymentColors, statuses, paymentStatuses } from '../store.jsx';
 import { loadLocalOrderBackgrounds, pickOrderBackground } from '../orderCardBackgrounds.js';
 import { markCardOrderNoShow } from '../db.js';
+import { runSequentialCloudActions } from '../utils/batchCloudActions.js';
+import { getEffectiveServicePrice, getPriceAdjustment } from '../utils/pricing.js';
 import {
   Plus, Search, Filter, X, Edit3, Trash2, ChevronDown,
   Sparkles, Copy, FileDown, MoreHorizontal, CheckCircle2, Eye, Printer, Brush,
@@ -96,7 +98,7 @@ function OrderForm({ order, onClose }) {
     }
     const totalPrice = form.price + (form.extraServices || []).reduce((s, sid) => {
       const svc = state.extraServices.find(es => es.id === sid);
-      return s + (svc ? svc.price : 0);
+      return s + (svc ? getEffectiveServicePrice(form.makeupType, svc) : 0);
     }, 0);
     // 时间冲突检测
     const conflict = state.orders.find(o =>
@@ -522,7 +524,14 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
   })[key] ?? `{${key}}`);
 
   // 批量操作
-  const batchUpdateStatus = (newStatus) => {
+  const finishBatchSelection = (failed, total) => {
+    setSelectedIds(new Set(failed));
+    if (failed.length > 0) {
+      window.alert(`${total - failed.length} 项已成功，${failed.length} 项同步失败并已保留选中，请检查网络后重试。`);
+    }
+  };
+
+  const batchUpdateStatus = async (newStatus) => {
     if (!window.confirm(`将选中的 ${selectedIds.size} 个订单状态改为「${statusLabels[newStatus]}」？`)) return;
     // 批量确认时检查冲突
     if (newStatus === 'confirmed') {
@@ -540,26 +549,37 @@ ${order.deposit > 0 ? '<div class="row"><span>定金</span><strong>¥'+order.dep
         if (!window.confirm(`⚠️ 以下订单存在时间冲突：\n${conflicts.join('\n')}\n\n是否仍确认？`)) return;
       }
     }
-    selectedIds.forEach(id => {
+    const targets = [...selectedIds].map(id => {
       const o = state.orders.find(x => x.id === id);
-      if (o) dispatch({ type: 'UPDATE_ORDER', payload: { ...o, status: newStatus } });
-    });
-    setSelectedIds(new Set());
+      return o ? { id, order: o } : null;
+    }).filter(Boolean);
+    const { failed } = await runSequentialCloudActions(
+      targets,
+      dispatch,
+      target => ({ type: 'UPDATE_ORDER', payload: { ...target.order, status: newStatus } }),
+    );
+    finishBatchSelection(failed.map(target => target.id), targets.length);
   };
 
-  const batchUpdatePayment = (newPayment) => {
+  const batchUpdatePayment = async (newPayment) => {
     if (!window.confirm(`将选中的 ${selectedIds.size} 个订单付款状态改为「${paymentLabels[newPayment]}」？`)) return;
-    selectedIds.forEach(id => {
+    const targets = [...selectedIds].map(id => {
       const o = state.orders.find(x => x.id === id);
-      if (o) dispatch({ type: 'UPDATE_ORDER', payload: { ...o, paymentStatus: newPayment } });
-    });
-    setSelectedIds(new Set());
+      return o ? { id, order: o } : null;
+    }).filter(Boolean);
+    const { failed } = await runSequentialCloudActions(
+      targets,
+      dispatch,
+      target => ({ type: 'UPDATE_ORDER', payload: { ...target.order, paymentStatus: newPayment } }),
+    );
+    finishBatchSelection(failed.map(target => target.id), targets.length);
   };
 
-  const batchDelete = () => {
+  const batchDelete = async () => {
     if (window.confirm(`将选中的 ${selectedIds.size} 个订单移入回收站？`)) {
-      selectedIds.forEach(id => dispatch({ type: 'DELETE_ORDER', payload: id }));
-      setSelectedIds(new Set());
+      const targets = [...selectedIds];
+      const { failed } = await runSequentialCloudActions(targets, dispatch, id => ({ type: 'DELETE_ORDER', payload: id }));
+      finishBatchSelection(failed, targets.length);
     }
   };
 
@@ -974,7 +994,12 @@ function OrderConfirmCard({ order, backgrounds, onClose }) {
   const confirmedServices = state.extraServices.filter(s =>
     (order.extraServices || []).includes(s.id)
   );
-  const basePrice = order.price - confirmedServices.reduce((s, svc) => s + svc.price, 0);
+  const typeConfig = state.makeupTypes.find(type => type.name === order.makeupType);
+  const basePrice = Number(typeConfig?.price ?? typeConfig?.defaultPrice ?? 0);
+  const serviceTotal = confirmedServices.reduce((sum, service) => sum + getEffectiveServicePrice(order.makeupType, service), 0);
+  const priceAdjustment = getPriceAdjustment(order.date, order.time, state.priceRules);
+  const configuredTotal = Math.max(0, basePrice + serviceTotal + priceAdjustment.amount);
+  const priceDifference = Number(order.price || 0) - configuredTotal;
   const [copied, setCopied] = useState(false);
   const [background, setBackground] = useState(() => pickOrderBackground(backgrounds));
 
@@ -996,9 +1021,11 @@ function OrderConfirmCard({ order, backgrounds, onClose }) {
     order.location ? `📍 地点：${order.location}` : '',
     '',
     `💰 妆造费：¥${basePrice}`,
-    ...confirmedServices.map(s => `   + ${s.name}：¥${s.price}`),
+    ...confirmedServices.map(s => `   + ${s.name}：¥${getEffectiveServicePrice(order.makeupType, s)}`),
+    priceAdjustment.amount !== 0 ? `   ${priceAdjustment.label}：${priceAdjustment.amount > 0 ? '+' : '-'}¥${Math.abs(priceAdjustment.amount)}` : '',
     `   ──────────────`,
     `   合计：¥${order.price}`,
+    priceDifference !== 0 ? `⚠️ 核价异常：当前配置应为 ¥${configuredTotal}，订单保存金额相差 ${priceDifference > 0 ? '+' : ''}¥${priceDifference}` : '',
     order.cardCoveredAmount > 0 ? `💳 优惠卡抵扣：-¥${order.cardCoveredAmount}` : '',
     order.deposit > 0 ? `定金：¥${order.deposit}` : '',
     order.deposit > 0 ? `🧾 尾款：¥${Math.max(0, order.price - order.deposit - (order.cardCoveredAmount || 0))}（妆后面结）` : '',
@@ -1095,13 +1122,16 @@ function OrderConfirmCard({ order, backgrounds, onClose }) {
               {confirmedServices.map(s => (
                 <div key={s.id} className="flex justify-between text-sm mb-1">
                   <span className="text-warm-800/40">+ {s.name}</span>
-                  <span className="text-warm-800/60">¥{s.price}</span>
+                  <span className="text-warm-800/60">¥{getEffectiveServicePrice(order.makeupType, s)}</span>
                 </div>
               ))}
               <div className="border-t border-brand-100 pt-2 mt-1 flex justify-between">
                 <span className="font-semibold text-warm-800">合计</span>
                 <span className="text-lg font-extrabold text-brand-600">¥{order.price}</span>
               </div>
+              {priceDifference !== 0 && <div className="mt-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                核价异常：当前配置应为 ¥{configuredTotal}，订单保存金额相差 {priceDifference > 0 ? '+' : ''}¥{priceDifference}
+              </div>}
               {order.cardCoveredAmount > 0 && <div className="flex justify-between text-sm mt-2 text-emerald-700"><span>优惠卡抵扣</span><span>-¥{order.cardCoveredAmount}</span></div>}
             </div>
 

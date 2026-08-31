@@ -2,6 +2,7 @@
 import { useStore, statusLabels, statusColors, paymentLabels } from '../store.jsx';
 import { buildDaySummary, getShanghaiDateString } from '../utils/daySummary.js';
 import { ChevronLeft, ChevronRight, Clock, Download, Printer, Copy, BarChart3, Banknote, CalendarDays, CircleDollarSign, Timer, StickyNote, WalletCards, Sparkles, MapPin, UserRound } from 'lucide-react';
+import { getMonthExpectedRevenue } from '../utils/revenue.js';
 
 export default function Calendar() {
   const { state } = useStore();
@@ -120,7 +121,7 @@ ${monthOrders.map(o => {
   return `<tr><td>${o.date.slice(5)}</td><td>${o.time||''}·${o.duration}h</td><td>${o.customerName}</td><td>${o.makeupType}</td><td class="${sc[o.status]||''}">${sl[o.status]||o.status}</td><td>¥${o.price}</td></tr>`;
 }).join('')}
 </tbody></table>
-<p class="footer">小荷约妆 · ${year}年${month+1}月 · 共${monthOrders.length}单 · 收入¥${monthIncome.toLocaleString()}</p>
+<p class="footer">小荷约妆 · ${year}年${month+1}月 · 共${monthOrders.length}单 · 已收¥${monthIncome.toLocaleString()} · 预期收入¥${monthExpectedIncome.toLocaleString()}</p>
 </body></html>`;
 
     const win = window.open('', '_blank', 'width=900,height=700');
@@ -150,7 +151,7 @@ ${monthOrders.map(o => {
         text += `  ${o.time||'--'} ${o.makeupType} · ${o.customerName} · ¥${o.price} [${sl[o.status]||o.status}]\n`;
       });
     });
-    text += `\n${'─'.repeat(30)}\n共${monthOrders.length}单 · 收入¥${monthIncome.toLocaleString()}`;
+    text += `\n${'─'.repeat(30)}\n共${monthOrders.length}单 · 已收¥${monthIncome.toLocaleString()} · 预期收入¥${monthExpectedIncome.toLocaleString()}`;
 
     navigator.clipboard.writeText(text).then(
       () => alert('已复制！可直接粘贴到微信发送'),
@@ -172,10 +173,7 @@ ${monthOrders.map(o => {
 
   // 本月预期收入：有效订单的总价，不含已取消、已拒绝订单
   const monthExpectedIncome = useMemo(() =>
-    state.orders.filter(o => {
-      const d = new Date(`${o.date}T00:00:00`);
-      return d.getMonth() === month && d.getFullYear() === year && !['cancelled', 'rejected'].includes(o.status);
-    }).reduce((sum, o) => sum + (Number(o.price) || 0), 0),
+    getMonthExpectedRevenue(state.orders, year, month),
   [state.orders, year, month]);
 
   const weekDays = ['日', '一', '二', '三', '四', '五', '六'];

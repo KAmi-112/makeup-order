@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import { updateAccountEmail, updateAccountPassword } from '../db.js';
 import MfaSettings from '../components/MfaSettings.jsx';
 import { parseDiscountCardRules } from '../utils/discountCardRules.js';
+import { saveActionWithFeedback } from '../utils/cloudSave.js';
+import { buildSettingsImportPayload } from '../utils/backupImport.js';
 import {
   Plus, Edit3, Trash2, X, Check, Download, Upload,
   Sparkles, AlertCircle, ShieldCheck, Copy, MessageCircle,
@@ -87,11 +89,10 @@ export default function Settings() {
   useEffect(() => setMiniappDraft(state.miniappConfig), [state.miniappConfig]);
   useEffect(() => setReminderDrafts(state.reminderTemplates || []), [state.reminderTemplates]);
 
-  const saveTopQuotes = () => {
+  const saveTopQuotes = async () => {
     const cleaned = quoteDrafts.map(q => q.trim()).filter(Boolean).slice(0, 12);
     if (cleaned.length === 0) { showMsg('请至少保留一句顶部语句', 'error'); return; }
-    dispatch({ type: 'UPDATE_TOP_QUOTES', payload: cleaned });
-    showMsg('顶部轮播语句已保存');
+    await saveActionWithFeedback({ dispatch, action: { type: 'UPDATE_TOP_QUOTES', payload: cleaned }, showMsg, successMessage: '顶部轮播语句已保存', failureMessage: '保存失败，请检查网络后重试' });
   };
 
   const saveBookingRules = async () => {
@@ -99,9 +100,8 @@ export default function Settings() {
     showMsg(saved ? '接单日期与时间规则已保存并同步到小程序' : '保存失败，请检查网络后重试');
   };
 
-  const saveMiniappConfig = () => {
-    dispatch({ type: 'UPDATE_MINIAPP_CONFIG', payload: miniappDraft });
-    showMsg('小程序基础信息已同步到云端');
+  const saveMiniappConfig = async () => {
+    await saveActionWithFeedback({ dispatch, action: { type: 'UPDATE_MINIAPP_CONFIG', payload: miniappDraft }, showMsg, successMessage: '小程序基础信息已同步到云端', failureMessage: '同步失败，请检查网络后重试' });
   };
 
   const previewDiscountCardRules = () => {
@@ -110,19 +110,17 @@ export default function Settings() {
     setRulePreview(parsed);
   };
 
-  const confirmDiscountCardRules = () => {
+  const confirmDiscountCardRules = async () => {
     if (!rulePreview) return;
     const next = { ...miniappDraft, discountCardRules: rulePreview.rules };
     setMiniappDraft(next);
-    dispatch({ type: 'UPDATE_MINIAPP_CONFIG', payload: next });
-    setRulePreview(null);
-    showMsg('优惠卡规则已同步到云端');
+    const saved = await saveActionWithFeedback({ dispatch, action: { type: 'UPDATE_MINIAPP_CONFIG', payload: next }, showMsg, successMessage: '优惠卡规则已同步到云端', failureMessage: '优惠卡规则同步失败，请检查网络后重试' });
+    if (saved) setRulePreview(null);
   };
 
-  const saveReminderTemplates = () => {
+  const saveReminderTemplates = async () => {
     const cleaned = reminderDrafts.filter(t => t.name.trim() && t.content.trim());
-    dispatch({ type: 'UPDATE_REMINDER_TEMPLATES', payload: cleaned });
-    showMsg('客户提醒模板已保存');
+    await saveActionWithFeedback({ dispatch, action: { type: 'UPDATE_REMINDER_TEMPLATES', payload: cleaned }, showMsg, successMessage: '客户提醒模板已保存', failureMessage: '提醒模板保存失败，请检查网络后重试' });
   };
 
   const changeEmail = async () => {
@@ -166,31 +164,28 @@ export default function Settings() {
   const [showServiceForm, setShowServiceForm] = useState(false);
   const [serviceForm, setServiceForm] = useState({ name: '', price: 0 });
 
-  const handleSaveService = () => {
+  const handleSaveService = async () => {
     if (!serviceForm.name.trim()) return;
-    if (editingService) {
-      dispatch({ type: 'UPDATE_EXTRA_SERVICE', payload: { ...editingService, ...serviceForm } });
-    } else {
-      dispatch({ type: 'ADD_EXTRA_SERVICE', payload: { ...serviceForm, id: generateId() } });
-    }
+    const action = editingService
+      ? { type: 'UPDATE_EXTRA_SERVICE', payload: { ...editingService, ...serviceForm } }
+      : { type: 'ADD_EXTRA_SERVICE', payload: { ...serviceForm, id: generateId() } };
+    const saved = await saveActionWithFeedback({ dispatch, action, showMsg, successMessage: editingService ? '服务项已更新' : '服务项已添加', failureMessage: '服务项保存失败，请检查网络后重试' });
+    if (!saved) return;
     setShowServiceForm(false); setEditingService(null);
     setServiceForm({ name: '', price: 0 });
-    showMsg(editingService ? '服务项已更新' : '服务项已添加');
   };
 
-  const handleDeleteService = (id) => {
-    dispatch({ type: 'DELETE_EXTRA_SERVICE', payload: id });
-    showMsg('服务项已删除');
+  const handleDeleteService = async (id) => {
+    await saveActionWithFeedback({ dispatch, action: { type: 'DELETE_EXTRA_SERVICE', payload: id }, showMsg, successMessage: '服务项已删除', failureMessage: '删除失败，请检查网络后重试' });
   };
 
   // ---- 约妆须知 ----
   const [noticeEdit, setNoticeEdit] = useState(false);
   const [noticeText, setNoticeText] = useState(state.notice);
 
-  const handleSaveNotice = () => {
-    dispatch({ type: 'UPDATE_NOTICE', payload: noticeText });
-    setNoticeEdit(false);
-    showMsg('约妆须知已保存');
+  const handleSaveNotice = async () => {
+    const saved = await saveActionWithFeedback({ dispatch, action: { type: 'UPDATE_NOTICE', payload: noticeText }, showMsg, successMessage: '约妆须知已保存', failureMessage: '约妆须知保存失败，请检查网络后重试' });
+    if (saved) setNoticeEdit(false);
   };
 
   const handleCopyNotice = () => {
@@ -227,28 +222,27 @@ export default function Settings() {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev) => {
+      reader.onload = async (ev) => {
         try {
           const data = JSON.parse(ev.target.result);
-          if (!data.orders || !Array.isArray(data.orders)) throw new Error('格式不正确');
-          if (window.confirm(`即将导入 ${data.orders.length} 条订单及相关设置。\n\n⚠️ 当前数据将被覆盖，确定继续吗？`)) {
-            dispatch({ type: 'IMPORT_DATA', payload: data });
-            setNoticeText(data.notice || state.notice);
-            showMsg(`成功导入 ${data.orders.length} 条订单！`);
+          const { payload, skippedOrderCount } = buildSettingsImportPayload(data);
+          const orderNotice = skippedOrderCount > 0
+            ? `\n\n备份中的 ${skippedOrderCount} 条订单不会导入，避免与生产订单冲突。`
+            : '';
+          if (window.confirm(`即将恢复备份中的管理端设置。${orderNotice}\n\n确定继续吗？`)) {
+            const saved = await dispatch({ type: 'IMPORT_DATA', payload });
+            if (!saved) {
+              showMsg('设置恢复失败，请检查网络后重试', 'error');
+              return;
+            }
+            setNoticeText(payload.notice ?? state.notice);
+            showMsg(skippedOrderCount > 0 ? `设置已恢复；${skippedOrderCount} 条订单已安全跳过` : '设置已恢复');
           }
-        } catch (err) { showMsg('导入失败：文件格式不正确', 'error'); }
+        } catch (err) { showMsg(`导入失败：${err.message || '文件格式不正确'}`, 'error'); }
       };
       reader.readAsText(file);
     };
     input.click();
-  };
-
-  const handleClearAll = () => {
-    if (window.confirm('⚠️ 确定要删除全部数据吗？此操作不可撤销！\n\n建议先导出备份。')) {
-      dispatch({ type: 'IMPORT_DATA', payload: { orders: [], makeupTypes: [], extraServices: [], notice: '' } });
-      setNoticeText('');
-      showMsg('全部数据已清除');
-    }
   };
 
   return (
@@ -776,10 +770,9 @@ export default function Settings() {
                   className="p-1.5 rounded-lg hover:bg-brand-100 text-warm-800/40 hover:text-brand-600 transition-colors">
                   <Edit3 className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={() => {
+                <button onClick={async () => {
                   if (state.makeupTypes.length <= 1) { showMsg('至少保留一个妆造类型', 'error'); return; }
-                  dispatch({ type: 'DELETE_MAKEUP_TYPE', payload: mt.id });
-                  showMsg('妆造类型已删除');
+                  await saveActionWithFeedback({ dispatch, action: { type: 'DELETE_MAKEUP_TYPE', payload: mt.id }, showMsg, successMessage: '妆造类型已删除', failureMessage: '删除失败，请检查网络后重试' });
                 }}
                   className="p-1.5 rounded-lg hover:bg-red-100 text-warm-800/40 hover:text-red-500 transition-colors">
                   <Trash2 className="w-3.5 h-3.5" />
@@ -836,9 +829,9 @@ export default function Settings() {
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 text-blue-600 text-sm font-medium rounded-xl hover:bg-blue-100 transition-colors active:scale-95">
             <Upload className="w-4 h-4" /> 导入恢复
           </button>
-          <button onClick={handleClearAll}
-            className="flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-500 text-sm font-medium rounded-xl hover:bg-red-100 transition-colors active:scale-95">
-            <Trash2 className="w-4 h-4" /> 清空数据
+          <button type="button" disabled title="为防止误删生产订单，此功能已停用"
+            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 text-gray-400 text-sm font-medium rounded-xl cursor-not-allowed">
+            <Trash2 className="w-4 h-4" /> 清空订单已停用
           </button>
         </div>
       </div>
